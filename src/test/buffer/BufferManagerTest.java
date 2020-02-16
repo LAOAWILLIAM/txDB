@@ -109,6 +109,93 @@ public class BufferManagerTest {
         deleteFile(logFile);
     }
 
+    @Test
+    public void multithreadTest() {
+        class BmThread1 extends Thread {
+            private BufferManager bufferManager;
+
+            private BmThread1(BufferManager bufferManager) {
+                this.bufferManager = bufferManager;
+            }
+
+            public void run() {
+                this.bufferManager.fetchPage(1);
+                this.bufferManager.unpinPage(1, false);
+            }
+        }
+
+        class BmThread2 extends Thread {
+
+            private BufferManager bufferManager;
+
+            private BmThread2(BufferManager bufferManager) {
+                this.bufferManager = bufferManager;
+            }
+
+            public void run() {
+//                this.bufferManager.
+            }
+        }
+
+        class BmThread3 extends Thread {
+
+            private BufferManager bufferManager;
+
+            private BmThread3(BufferManager bufferManager) {
+                this.bufferManager = bufferManager;
+            }
+
+            public void run() {
+//                this.bufferManager.
+            }
+        }
+
+        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
+        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
+        File dbFile = new File(dbFilePath);
+        File logFile = new File(logFilePath);
+
+        int bufferSize = 100000;
+        DiskManager diskManager = new DiskManager(dbFilePath);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+
+        int i;
+        Page page;
+        for (i = 0; i < bufferSize; i++) {
+            assertNotNull(page = bufferManager.newPage());
+            /**
+             * `instanceof` needed to avoid `ClassCastException`
+             */
+            if (page instanceof TablePage) {
+                TablePage tablePage = (TablePage) page;
+                tablePage.setPrevPageId(i - 1);
+                tablePage.setNextPageId(i + 1);
+            }
+        }
+
+        BmThread1 bmThread1 = new BmThread1(bufferManager);
+        BmThread2 bmThread2 = new BmThread2(bufferManager);
+        BmThread3 bmThread3 = new BmThread3(bufferManager);
+
+        bmThread1.start();
+        bmThread2.start();
+        bmThread3.start();
+
+        try {
+            bmThread1.join();
+            bmThread2.join();
+            bmThread3.join();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        diskManager.close();
+
+        deleteFile(dbFile);
+        deleteFile(logFile);
+
+    }
+
     private void deleteFile(File file) {
         if(file.delete()) {
             System.out.println("File deleted successfully");

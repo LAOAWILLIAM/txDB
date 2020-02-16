@@ -9,6 +9,8 @@ public class BufferManager {
 
     /**
      *
+     * @param bufferSize
+     * @param diskManager
      */
     public BufferManager(int bufferSize, DiskManager diskManager) {
         this.lruBufferPool = new LRUBufferPool(bufferSize, diskManager);
@@ -17,6 +19,9 @@ public class BufferManager {
 
     /**
      *
+     * @param bufferSize
+     * @param loadFactor
+     * @param diskManager
      */
     public BufferManager(int bufferSize, float loadFactor, DiskManager diskManager) {
         this.lruBufferPool = new LRUBufferPool(bufferSize, loadFactor, diskManager);
@@ -25,6 +30,8 @@ public class BufferManager {
 
     /**
      *
+     * @param pageId
+     * @return
      */
     public Page fetchPage(int pageId) {
         synchronized (this) {
@@ -51,6 +58,9 @@ public class BufferManager {
 
     /**
      *
+     * @param pageId
+     * @param isDirty
+     * @return
      */
     public boolean unpinPage(int pageId, boolean isDirty) {
         synchronized (this) {
@@ -90,6 +100,8 @@ public class BufferManager {
 
     /**
      *
+     * @param pageId
+     * @return
      */
     public boolean flushPage(int pageId) {
         synchronized (this) {
@@ -117,6 +129,8 @@ public class BufferManager {
 
     /**
      *
+     * @param pageId
+     * @return
      */
     public boolean deletePage(int pageId) {
         synchronized (this) {

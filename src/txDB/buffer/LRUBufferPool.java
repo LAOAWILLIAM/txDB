@@ -129,7 +129,7 @@ public class LRUBufferPool {
             /**
              * when there is no evict page, and
              * currentSize will be large than bufferSize,
-             * in other words, all pages are currently pinned,
+             * in other words, when all pages are currently pinned,
              * new page cannot be put.
              */
             DLinkedNode evictNode = new DLinkedNode();

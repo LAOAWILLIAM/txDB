@@ -8,7 +8,7 @@ import java.util.List;
 
 import static org.junit.Assert.*;
 
-import txDB.storage.index.BPlusTreeIndex;
+import txDB.storage.index.InMemoryBPlusTreeIndex;
 
 public class BPlusTreeIndexTest {
     @Test
@@ -36,7 +36,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void rootAsLeafNodeTest() {
-        BPlusTreeIndex<Integer, Integer> bpt = new BPlusTreeIndex<>(3);
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
         assertNull(bpt.find(5));
 
         bpt.insert(5, 100);
@@ -47,7 +47,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void rootAsLeafNodeFirstSplitTest() {
-        BPlusTreeIndex<Integer, Integer> bpt = new BPlusTreeIndex<>(3);
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
         assertNull(bpt.find(5));
 
         bpt.insert(5, 100);
@@ -60,7 +60,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void rootAsLeafNodeFirstSplitAndInsertTest() {
-        BPlusTreeIndex<Integer, Integer> bpt = new BPlusTreeIndex<>(3);
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
         assertNull(bpt.find(5));
 
         bpt.insert(5, 100);
@@ -81,7 +81,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void internalNodeSplitTest() {
-        BPlusTreeIndex<Integer, Integer> bpt = new BPlusTreeIndex<>(3);
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
         assertNull(bpt.find(5));
 
         bpt.insert(5, 100);
@@ -137,7 +137,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void largeInsertTest() {
-        BPlusTreeIndex<Integer, Integer> bpt = new BPlusTreeIndex<>(10);
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(10);
         assertNull(bpt.find(5));
 
         int max = 10000000, i;
@@ -151,7 +151,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void traverseLeafNodesTest() {
-        BPlusTreeIndex<Integer, Integer> bpt = new BPlusTreeIndex<>(3);
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
         assertNull(bpt.find(5));
 
         bpt.insert(5, 100);
@@ -207,7 +207,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void deleteWithoutRedistributeAndMergeTest() {
-        BPlusTreeIndex<Integer, Integer> bpt = new BPlusTreeIndex<>(5);
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(5);
         assertNull(bpt.find(5));
 
         bpt.insert(5, 100);
@@ -229,7 +229,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void deleteWithRedistributeAndMergeTest() {
-        BPlusTreeIndex<Integer, Integer> bpt = new BPlusTreeIndex<>(5);
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(5);
         assertNull(bpt.find(5));
 
         bpt.insert(5, 100);
@@ -262,7 +262,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void deleteTest() {
-        BPlusTreeIndex<Integer, Integer> bpt = new BPlusTreeIndex<>(3);
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
         assertNull(bpt.find(5));
 
         int max = 1000000, i;
