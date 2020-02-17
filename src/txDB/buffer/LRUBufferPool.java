@@ -2,7 +2,7 @@ package txDB.buffer;
 
 import txDB.storage.disk.DiskManager;
 import txDB.storage.page.Page;
-//import myPTA.storage.page.TablePage;
+//import txDB.storage.page.TablePage;
 
 import java.util.HashMap;
 //import java.util.concurrent.ConcurrentHashMap;
