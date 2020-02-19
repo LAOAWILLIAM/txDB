@@ -2,7 +2,12 @@ package txDB.storage.page;
 
 import java.nio.ByteBuffer;
 
+import txDB.Config;
+import txDB.concurrency.LockManager;
+import txDB.concurrency.Transaction;
+import txDB.recovery.LogManager;
 import txDB.storage.table.RecordID;
+import txDB.storage.table.Tuple;
 
 /**
  * Reference: This page format is designed by BusTub team, Carnegie Mellon University Database Group
@@ -32,6 +37,9 @@ public class TablePage extends Page {
     private static final int TUPLE_COUNT_OFFSET = 20;
     private static final int TUPLE_OFFSET_START_OFFSET = 24;
     private static final int TUPLE_SIZE_START_OFFSET = 28;
+    private static final int PAGE_HEADER_SIZE = 24;
+    private static final int TUPLE_POINTER_SIZE = 8;
+    private static final int DELETE_MASK = (1 << (Integer.SIZE - 1));
 
     public TablePage() {
         super();
@@ -99,7 +107,63 @@ public class TablePage extends Page {
      * @param rid
      * @return
      */
-    public boolean getTuple(RecordID rid) {
+    public Tuple getTuple(RecordID rid, Transaction txn, LockManager lockManager) {
+        int tupleIndex = rid.getTupleIndex();
+        if (tupleIndex > getTupleCount()) {
+            if (Config.ENABLE_LOGGING) {
+                // abort this transaction
+                // TODO
+            }
+            return null;
+        }
+
+        int tupleSize = getTupleSize(tupleIndex);
+        if (tupleIsDeleted(tupleSize)) {
+            if (Config.ENABLE_LOGGING) {
+                // abort this transaction
+                // TODO
+            }
+            return null;
+        }
+
+        // here we have a valid tuple and we shall get a shared lock
+        // TODO
+
+        // after get the lock, we can return the tuple
+        int tupleOffset = getTupleOffset(tupleIndex);
+        byte[] tupleData = new byte[tupleSize];
+        ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
+        pageBuffer.get(tupleData, tupleOffset, tupleSize);
+
+        Tuple newTuple = new Tuple();
+        newTuple.setTupleSize(tupleSize);
+        newTuple.setRecordID(rid);
+        newTuple.setAllocated(true);
+        newTuple.setTupleData(tupleData);
+
+        return newTuple;
+    }
+
+    /**
+     *
+     * @param rid
+     * @return
+     */
+    public boolean insertTuple(Tuple tuple, RecordID rid, Transaction txn, LockManager lockManager, LogManager logManager) {
+        // TODO
+        if (getRemainingFreeSpace() < tuple.getTupleSize() + TUPLE_POINTER_SIZE) return false;
+
+
+
+        return false;
+    }
+
+    /**
+     *
+     * @param rid
+     * @return
+     */
+    public boolean updateTuple(RecordID rid, Transaction txn, LockManager lockManager, LogManager logManager) {
         // TODO
         return false;
     }
@@ -109,7 +173,7 @@ public class TablePage extends Page {
      * @param rid
      * @return
      */
-    public boolean insertTuple(RecordID rid) {
+    public boolean markDelete(RecordID rid, Transaction txn, LockManager lockManager, LogManager logManager) {
         // TODO
         return false;
     }
@@ -119,27 +183,7 @@ public class TablePage extends Page {
      * @param rid
      * @return
      */
-    public boolean updateTuple(RecordID rid) {
-        // TODO
-        return false;
-    }
-
-    /**
-     *
-     * @param rid
-     * @return
-     */
-    public boolean markDelete(RecordID rid) {
-        // TODO
-        return false;
-    }
-
-    /**
-     *
-     * @param rid
-     * @return
-     */
-    public boolean applyDelete(RecordID rid) {
+    public boolean applyDelete(RecordID rid, Transaction txn, LockManager lockManager, LogManager logManager) {
         // TODO
         return false;
     }
@@ -214,5 +258,21 @@ public class TablePage extends Page {
         ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
         pageBuffer.putInt(FREE_SPACE_POINTER_OFFSET, freeSpacePointer);
         this.setPageData(pageBuffer.array());
+    }
+
+    private int getRemainingFreeSpace() {
+        return getFreeSpacePointer() - PAGE_HEADER_SIZE - TUPLE_POINTER_SIZE * getTupleCount();
+    }
+
+    private boolean tupleIsDeleted(int tupleSize) {
+        return tupleSize == 0 || (tupleSize & DELETE_MASK) == 0;
+    }
+
+    private int setTupleDeleted(int tupleSize) {
+        return tupleSize | DELETE_MASK;
+    }
+
+    private int unsetTupleDeleted(int tupleSize) {
+        return tupleSize & (~DELETE_MASK);
     }
 }
