@@ -196,7 +196,11 @@ public class BufferManagerTest {
 
     }
 
-    private void deleteFile(File file) {
+    /**
+     * common function to delete file while testing
+     * @param file
+     */
+    public static void deleteFile(File file) {
         if(file.delete()) {
             System.out.println("File deleted successfully");
         } else {

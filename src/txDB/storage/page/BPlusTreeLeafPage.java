@@ -1,5 +1,12 @@
 package txDB.storage.page;
 
-public class BPlusTreeLeafPage extends BPlusTreePage {
+import java.io.Serializable;
+
+public class BPlusTreeLeafPage extends BPlusTreePage implements Serializable {
     // TODO
+    private int nextPageId;
+
+    public BPlusTreeLeafPage() {
+        super();
+    }
 }

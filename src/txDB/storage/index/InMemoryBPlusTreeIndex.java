@@ -41,10 +41,10 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
-    private class InternalNode<K extends Comparable<K>, V> extends Node<K, V> {
+    private class InnerNode<K extends Comparable<K>, V> extends Node<K, V> {
         private ArrayList<Node<K, V>> children;
 
-        private InternalNode(K key, Node<K, V> leftNode, Node<K, V> rightNode, boolean isRoot) {
+        private InnerNode(K key, Node<K, V> leftNode, Node<K, V> rightNode, boolean isRoot) {
             isLeafNode = false;
             isRootNode = isRoot;
             keys = new ArrayList<>();
@@ -54,7 +54,7 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
             children.add(rightNode);
         }
 
-        private InternalNode(List<K> ks, List<Node<K, V>> cd, boolean isRoot) {
+        private InnerNode(List<K> ks, List<Node<K, V>> cd, boolean isRoot) {
             isLeafNode = false;
             isRootNode = isRoot;
             keys = new ArrayList<>(ks);
@@ -187,14 +187,14 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
             }
         } else {
             if (key.compareTo(root.keys.get(0)) < 0) {
-                insertHelper(((InternalNode<K, V>) root).children.get(0), key, value);
+                insertHelper(((InnerNode<K, V>) root).children.get(0), key, value);
             } else if (key.compareTo(root.keys.get(root.keys.size() - 1)) >= 0) {
-                insertHelper(((InternalNode<K, V>) root).children.get(((InternalNode<K, V>) root).children.size() - 1), key, value);
+                insertHelper(((InnerNode<K, V>) root).children.get(((InnerNode<K, V>) root).children.size() - 1), key, value);
             } else {
                 int i;
                 for (i = 1; i < root.keys.size(); i++) {
-                    if (((InternalNode<K, V>) root).keys.get(i).compareTo(key) > 0)
-                        insertHelper(((InternalNode<K, V>) root).children.get(i), key, value);
+                    if (((InnerNode<K, V>) root).keys.get(i).compareTo(key) > 0)
+                        insertHelper(((InnerNode<K, V>) root).children.get(i), key, value);
                 }
             }
         }
@@ -226,70 +226,70 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
 
         if (root.isLeafNode) {
             // it is the first time of splitting
-            root = new InternalNode<>(splitKey, leafNode, rightNode, true);
+            root = new InnerNode<>(splitKey, leafNode, rightNode, true);
             leafNode.setParent(root);
             rightNode.setParent(root);
         } else {
             Node<K, V> parentNode = leafNode.getParent();
             rightNode.setParent(parentNode);
-            ((InternalNode<K, V>) parentNode).insertAndSort(splitKey, rightNode);
+            ((InnerNode<K, V>) parentNode).insertAndSort(splitKey, rightNode);
 //            System.out.println("parent node keys: " + parentNode.keys);
-//            for (int i = 0; i < ((InternalNode<K, V>) parentNode).children.size(); i++)
-//                System.out.println(((InternalNode<K, V>) parentNode).children.get(i).keys);
+//            for (int i = 0; i < ((InnerNode<K, V>) parentNode).children.size(); i++)
+//                System.out.println(((InnerNode<K, V>) parentNode).children.get(i).keys);
             if (parentNode.isOverSized()) {
-//                System.out.println("enter internal node split");
-                splitInternalNode(((InternalNode<K, V>) parentNode));
+//                System.out.println("enter inner node split");
+                splitInnerNode(((InnerNode<K, V>) parentNode));
             }
         }
     }
 
     /**
      *
-     * @param internalNode
+     * @param innerNode
      */
-    private void splitInternalNode(InternalNode<K, V> internalNode) {
-//        System.out.println("enter internal node split");
-        int from = MAXDEGREE / 2, keysTo = internalNode.keys.size(), childrenTo = internalNode.children.size();
-        K splitKey = internalNode.keys.get(from);
+    private void splitInnerNode(InnerNode<K, V> innerNode) {
+//        System.out.println("enter inner node split");
+        int from = MAXDEGREE / 2, keysTo = innerNode.keys.size(), childrenTo = innerNode.children.size();
+        K splitKey = innerNode.keys.get(from);
 
-        InternalNode<K, V> rightIntenalNode = new InternalNode<K, V>(
-                internalNode.keys.subList(from + 1, keysTo),
-                internalNode.children.subList(from + 1, childrenTo),
+        InnerNode<K, V> rightIntenalNode = new InnerNode<K, V>(
+                innerNode.keys.subList(from + 1, keysTo),
+                innerNode.children.subList(from + 1, childrenTo),
                 false
         );
-        internalNode.keys.subList(from, keysTo).clear();
-        internalNode.children.subList(from + 1, childrenTo).clear();
+        innerNode.keys.subList(from, keysTo).clear();
+        innerNode.children.subList(from + 1, childrenTo).clear();
 
-//        System.out.println(splitKey + ", " + internalNode.keys + ", " + rightIntenalNode.keys);
+//        System.out.println(splitKey + ", " + innerNode.keys + ", " + rightIntenalNode.keys);
 
-        // assign left and right internal nodes to different parents
+        // assign left and right inner nodes to different parents
         int i;
-        for (i = 0; i < internalNode.children.size(); i++) {
-            internalNode.children.get(i).setParent(internalNode);
+        for (i = 0; i < innerNode.children.size(); i++) {
+            innerNode.children.get(i).setParent(innerNode);
         }
 
         for (i = 0; i < rightIntenalNode.children.size(); i++) {
             rightIntenalNode.children.get(i).setParent(rightIntenalNode);
         }
 
-        if (internalNode.isRootNode) {
-//            System.out.println("internal node is root node");
-            internalNode.setIsRoot(false);
-            root = new InternalNode<>(splitKey, internalNode, rightIntenalNode, true);
-            internalNode.setParent(root);
+        if (innerNode.isRootNode) {
+//            System.out.println("inner node is root node");
+            innerNode.setIsRoot(false);
+            root = new InnerNode<>(splitKey, innerNode, rightIntenalNode, true);
+            innerNode.setParent(root);
             rightIntenalNode.setParent(root);
-//            for (int i = 0; i < internalNode.children.size(); i++)
-//                System.out.println(internalNode.children.get(i).keys);
+//            for (int i = 0; i < innerNode.children.size(); i++)
+//                System.out.println(innerNode.children.get(i).keys);
 //            for (int i = 0; i < rightIntenalNode.children.size(); i++)
 //                System.out.println(rightIntenalNode.children.get(i).keys);
         } else {
-//            System.out.println("internal node is not root node");
-            Node<K, V> parentNode = internalNode.getParent();
-            ((InternalNode<K, V>) parentNode).insertAndSort(splitKey, rightIntenalNode);
+//            System.out.println("inner node is not root node");
+            Node<K, V> parentNode = innerNode.getParent();
+            ((InnerNode<K, V>) parentNode).insertAndSort(splitKey, rightIntenalNode);
             rightIntenalNode.setParent(parentNode);
 //            System.out.println(parentNode.keys);
             if (parentNode.isOverSized()) {
-                splitInternalNode(((InternalNode<K, V>) parentNode));
+                splitInnerNode(((InnerNode<K, V>) parentNode));
             }
         }
     }
@@ -309,14 +309,14 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
         else if (root.isLeafNode) return ((LeafNode<K, V>) root);
         else {
             if (key.compareTo(root.keys.get(0)) < 0) {
-                return findHelper(((InternalNode<K, V>) root).children.get(0), key);
+                return findHelper(((InnerNode<K, V>) root).children.get(0), key);
             } else if (key.compareTo(root.keys.get(root.keys.size() - 1)) >= 0) {
-                return findHelper(((InternalNode<K, V>) root).children.get(((InternalNode<K, V>) root).children.size() - 1), key);
+                return findHelper(((InnerNode<K, V>) root).children.get(((InnerNode<K, V>) root).children.size() - 1), key);
             } else {
                 int i;
                 for (i = 1; i < root.keys.size(); i++) {
-                    if (((InternalNode<K, V>) root).keys.get(i).compareTo(key) > 0)
-                        return findHelper(((InternalNode<K, V>) root).children.get(i), key);
+                    if (((InnerNode<K, V>) root).keys.get(i).compareTo(key) > 0)
+                        return findHelper(((InnerNode<K, V>) root).children.get(i), key);
                 }
             }
         }
@@ -351,14 +351,14 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
             }
         } else {
             if (key.compareTo(root.keys.get(0)) < 0) {
-                deleteHelper(((InternalNode<K, V>) root).children.get(0), key, 0);
+                deleteHelper(((InnerNode<K, V>) root).children.get(0), key, 0);
             } else if (key.compareTo(root.keys.get(root.keys.size() - 1)) >= 0) {
-                deleteHelper(((InternalNode<K, V>) root).children.get(((InternalNode<K, V>) root).children.size() - 1), key, ((InternalNode<K, V>) root).children.size() - 1);
+                deleteHelper(((InnerNode<K, V>) root).children.get(((InnerNode<K, V>) root).children.size() - 1), key, ((InnerNode<K, V>) root).children.size() - 1);
             } else {
                 int i;
                 for (i = 1; i < root.keys.size(); i++) {
-                    if (((InternalNode<K, V>) root).keys.get(i).compareTo(key) > 0)
-                        deleteHelper(((InternalNode<K, V>) root).children.get(i), key, i);
+                    if (((InnerNode<K, V>) root).keys.get(i).compareTo(key) > 0)
+                        deleteHelper(((InnerNode<K, V>) root).children.get(i), key, i);
                 }
             }
         }
@@ -379,12 +379,12 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
             largeNode.nextLeaf.prevLeaf = smallNode;
         }
 
-        InternalNode<K, V> parent = (InternalNode<K, V>) smallNode.getParent();
+        InnerNode<K, V> parent = (InnerNode<K, V>) smallNode.getParent();
         parent.remove(keyIndex);
 //        System.out.println("Leaf parent keys: " + parent.keys);
 
         if (!parent.isRootNode && parent.isUnderSized()) {
-            redistributeInternalNode(parent);
+            redistributeInnerNode(parent);
         }
 
         if (parent.isRootNode && parent.keys.size() == 0) {
@@ -397,9 +397,9 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
      * @param smallNode
      * @param largeNode
      */
-    private void mergeInternalNode(InternalNode<K, V> smallNode, InternalNode<K, V> largeNode, int parentIndex) {
-//        System.out.println("internal parentIndex: " + parentIndex);
-        InternalNode<K, V> parent = (InternalNode<K, V>) smallNode.getParent();
+    private void mergeInnerNode(InnerNode<K, V> smallNode, InnerNode<K, V> largeNode, int parentIndex) {
+//        System.out.println("inner parentIndex: " + parentIndex);
+        InnerNode<K, V> parent = (InnerNode<K, V>) smallNode.getParent();
 
         smallNode.keys.add(parent.keys.get(parentIndex));
         smallNode.keys.addAll(largeNode.keys);
@@ -407,10 +407,10 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
 
         parent.remove(parentIndex);
 
-//        System.out.println("internal parent keys: " + parent.keys);
+//        System.out.println("inner parent keys: " + parent.keys);
 
         if (!parent.isRootNode && parent.isUnderSized()) {
-            redistributeInternalNode(parent);
+            redistributeInnerNode(parent);
         }
 
         if (parent.isRootNode && parent.keys.size() == 0) {
@@ -478,9 +478,9 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
      *
      * @param parent
      */
-    private void redistributeInternalNode(InternalNode<K, V> parent) {
+    private void redistributeInnerNode(InnerNode<K, V> parent) {
         int i, parentIndex = -1;
-        InternalNode<K, V> grandParent = (InternalNode<K, V>) parent.getParent();
+        InnerNode<K, V> grandParent = (InnerNode<K, V>) parent.getParent();
 
         // find index of parent in grandparent's children list
         for (i = 0; i < grandParent.children.size(); i++) {
@@ -492,13 +492,13 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
 
 //        System.out.println("parentIndex: " + parentIndex);
 
-        InternalNode<K, V> sibling;
+        InnerNode<K, V> sibling;
         if (parentIndex == 0) {
-            sibling = (InternalNode<K, V>) grandParent.children.get(parentIndex + 1);
-            redistributeInternalNodeHelper(parent, sibling, parentIndex);
+            sibling = (InnerNode<K, V>) grandParent.children.get(parentIndex + 1);
+            redistributeInnerNodeHelper(parent, sibling, parentIndex);
         } else {
-            sibling = (InternalNode<K, V>) grandParent.children.get(parentIndex - 1);
-            redistributeInternalNodeHelper(sibling, parent, parentIndex);
+            sibling = (InnerNode<K, V>) grandParent.children.get(parentIndex - 1);
+            redistributeInnerNodeHelper(sibling, parent, parentIndex);
         }
     }
 
@@ -508,9 +508,9 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
      * @param largeNode
      * @param parentIndex
      */
-    private void redistributeInternalNodeHelper(InternalNode<K, V> smallNode, InternalNode<K, V> largeNode, int parentIndex) {
+    private void redistributeInnerNodeHelper(InnerNode<K, V> smallNode, InnerNode<K, V> largeNode, int parentIndex) {
         int totalSize = smallNode.keys.size() + largeNode.keys.size();
-//        System.out.println("internal totalSize: " + totalSize);
+//        System.out.println("inner totalSize: " + totalSize);
         if (totalSize >= 2 * Math.round(MAXDEGREE / 2.0 - 1)) {
             /**
              * Reference: https://github.com/tiejian/database-hw2/blob/master/BPlusTree.java
@@ -542,7 +542,7 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
             smallNode.children.addAll(kids.subList(0, newIndex + 1));
             largeNode.children.addAll(kids.subList(newIndex + 1, kids.size()));
         } else {
-            mergeInternalNode(smallNode, largeNode, parentIndex);
+            mergeInnerNode(smallNode, largeNode, parentIndex);
         }
     }
 
@@ -560,8 +560,8 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
 
                 if (!curNode.isLeafNode) {
                     int i;
-                    for (i = 0; i < ((InternalNode<K, V>) curNode).children.size(); i++) {
-                        queue.add(((InternalNode<K, V>) curNode).children.get(i));
+                    for (i = 0; i < ((InnerNode<K, V>) curNode).children.size(); i++) {
+                        queue.add(((InnerNode<K, V>) curNode).children.get(i));
                     }
                 }
             }
@@ -587,7 +587,7 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
         if (root == null) return null;
         else if (root.isLeafNode) return ((LeafNode<K, V>) root);
         else {
-            return traverseLeafNodesHelper(((InternalNode<K, V>) root).children.get(0));
+            return traverseLeafNodesHelper(((InnerNode<K, V>) root).children.get(0));
         }
     }
 }
