@@ -6,14 +6,15 @@ import txDB.storage.index.BPlusTreeIndex;
 import java.io.Serializable;
 import java.util.ArrayList;
 
-public class BPlusTreePage<K extends Comparable<K>, V> implements Serializable {
+public class BPlusTreePageNode<K extends Comparable<K>, V> implements Serializable {
     public enum IndexPageType{LEAFPAGE, INNERPAGE}
     // TODO
     private int pageId;
     private int parentPageId;
     private IndexPageType indexPageType;
-    private ArrayList<K> keys;
+    protected ArrayList<K> keys;
     private int maxSize;
+    private int size;
 
     public IndexPageType getIndexPageType() {
         return this.indexPageType;
@@ -47,12 +48,22 @@ public class BPlusTreePage<K extends Comparable<K>, V> implements Serializable {
         this.maxSize = maxSize;
     }
 
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public ArrayList<K> getKeys() {
+        return this.keys;
+    }
+
     public boolean isOverSized() {
-        return keys.size() >= maxSize;
+        return size >= maxSize;
     }
 
     public boolean isUnderSized() {
-        return keys.size() < Math.round(maxSize / 2.0 - 1);
+        // TODO
+//        return size < Math.round(maxSize / 2.0 - 1);
+        return false;
     }
 
     public boolean isLeafPage() {

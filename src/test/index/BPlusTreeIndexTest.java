@@ -6,7 +6,7 @@ import static org.junit.Assert.*;
 import test.buffer.BufferManagerTest;
 import txDB.buffer.BufferManager;
 import txDB.storage.disk.DiskManager;
-import txDB.storage.page.BPlusTreePage;
+import txDB.storage.page.BPlusTreePageNode;
 import txDB.storage.page.Page;
 
 import java.io.*;
@@ -28,22 +28,24 @@ public class BPlusTreeIndexTest {
         assertEquals(page0.getPageId(), 0);
 
         try {
-            BPlusTreePage bPlusTreePage = new BPlusTreePage();
-            bPlusTreePage.setPageId(page0.getPageId());
-            bPlusTreePage.setIndexPageType(BPlusTreePage.IndexPageType.LEAFPAGE);
+            BPlusTreePageNode bPlusTreePageNode = new BPlusTreePageNode();
+            bPlusTreePageNode.setPageId(page0.getPageId());
+            bPlusTreePageNode.setIndexPageType(BPlusTreePageNode.IndexPageType.LEAFPAGE);
 
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ObjectOutput out = new ObjectOutputStream(bos);
-            out.writeObject(bPlusTreePage);
-            page0.setPageData(bos.toByteArray());
+            out.writeObject(bPlusTreePageNode);
+            byte[] pageData = bos.toByteArray();
+            System.out.println("pageData length: " + pageData.length);
+            page0.setPageData(pageData);
             bufferManager.flushPage(page0.getPageId());
 
             page0 = bufferManager.fetchPage(0);
             ByteArrayInputStream bis = new ByteArrayInputStream(page0.getPageData());
             ObjectInputStream in = new ObjectInputStream(bis);
-            bPlusTreePage = (BPlusTreePage) in.readObject();
-            assertEquals(bPlusTreePage.getPageId(), 0);
-            assertEquals(bPlusTreePage.getIndexPageType(), BPlusTreePage.IndexPageType.LEAFPAGE);
+            bPlusTreePageNode = (BPlusTreePageNode) in.readObject();
+            assertEquals(bPlusTreePageNode.getPageId(), 0);
+            assertEquals(bPlusTreePageNode.getIndexPageType(), BPlusTreePageNode.IndexPageType.LEAFPAGE);
 
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
