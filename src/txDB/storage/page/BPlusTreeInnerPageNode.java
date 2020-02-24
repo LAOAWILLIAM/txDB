@@ -8,10 +8,11 @@ public class BPlusTreeInnerPageNode<K extends Comparable<K>, V> extends BPlusTre
     // TODO
     private ArrayList<Integer> children;
 
-    public BPlusTreeInnerPageNode(K key, int leftPage, int rightPage, int pageId, int parentPageId) {
+    public BPlusTreeInnerPageNode(K key, int leftPage, int rightPage, int pageId, int parentPageId, int maxSize) {
         setPageId(pageId);
         setParentPageId(parentPageId);
         setIndexPageType(IndexPageType.INNERPAGE);
+        setMaxSize(maxSize);
         keys = new ArrayList<>();
         keys.add(key);
         children = new ArrayList<>();

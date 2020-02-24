@@ -16,6 +16,10 @@ public class BPlusTreePageNode<K extends Comparable<K>, V> implements Serializab
     private int maxSize;
     private int size;
 
+    public BPlusTreePageNode() {
+        this.keys = new ArrayList<>();
+    }
+
     public IndexPageType getIndexPageType() {
         return this.indexPageType;
     }
@@ -57,20 +61,18 @@ public class BPlusTreePageNode<K extends Comparable<K>, V> implements Serializab
     }
 
     public boolean isOverSized() {
-        return size >= maxSize;
+        return keys.size() >= maxSize;
     }
 
     public boolean isUnderSized() {
-        // TODO
-//        return size < Math.round(maxSize / 2.0 - 1);
-        return false;
+        return keys.size() < Math.round(maxSize / 2.0 - 1);
     }
 
-    public boolean isLeafPage() {
+    public boolean isLeafPageNode() {
         return indexPageType == IndexPageType.LEAFPAGE;
     }
 
-    public boolean isRootPage() {
+    public boolean isRootPageNode() {
         return parentPageId == Config.INVALID_PAGE_ID;
     }
 }

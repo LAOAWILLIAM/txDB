@@ -2,6 +2,7 @@ package txDB.storage.page;
 
 import txDB.Config;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class Page {
@@ -48,7 +49,13 @@ public class Page {
 
     public void setPageData(byte[] pageData) {
         if (pageData == null) this.resetData();
-        else this.pageData = pageData;
+        else {
+            if (pageData.length < Config.PAGE_SIZE) {
+                ByteBuffer pageBuffer = ByteBuffer.wrap(new byte[Config.PAGE_SIZE]);
+                pageBuffer.put(pageData);
+                this.pageData = pageBuffer.array();
+            } else this.pageData = pageData;
+        }
     }
 
     public void setDirty(boolean isDirty) {

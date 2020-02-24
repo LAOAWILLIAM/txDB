@@ -13,22 +13,24 @@ public class BPlusTreeLeafPageNode<K extends Comparable<K>, V> extends BPlusTree
     private int prevPageId;
     private ArrayList<V> values;
 
-    public BPlusTreeLeafPageNode(K key, V value, int pageId, int parentPageId) {
+    public BPlusTreeLeafPageNode(K key, V value, int pageId, int parentPageId, int maxSize) {
         setPageId(pageId);
         setParentPageId(parentPageId);
         setIndexPageType(IndexPageType.LEAFPAGE);
         setNextPageId(Config.INVALID_PAGE_ID);
+        setMaxSize(maxSize);
         keys = new ArrayList<>();
         values = new ArrayList<>();
         keys.add(key);
         values.add(value);
     }
 
-    public BPlusTreeLeafPageNode(List<K> ks, List<V> vs, int pageId, int parentPageId) {
+    public BPlusTreeLeafPageNode(List<K> ks, List<V> vs, int pageId, int parentPageId, int maxSize) {
         setPageId(pageId);
         setParentPageId(parentPageId);
         setIndexPageType(IndexPageType.LEAFPAGE);
         setNextPageId(Config.INVALID_PAGE_ID);
+        setMaxSize(maxSize);
         keys = new ArrayList<>(ks);
         values = new ArrayList<>(vs);
     }
@@ -71,5 +73,15 @@ public class BPlusTreeLeafPageNode<K extends Comparable<K>, V> extends BPlusTree
                 }
             }
         }
+    }
+
+    public V getValue(K key) {
+        ListIterator<K> iterator = keys.listIterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().compareTo(key) == 0) {
+                return values.get(iterator.previousIndex());
+            }
+        }
+        return null;
     }
 }
