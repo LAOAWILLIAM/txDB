@@ -49,11 +49,10 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      */
     public void insert(K key, V value) {
         if (isEmpty()) {
-//            System.out.println("isEmpty");
             startNewTree(key, value);
             return;
         }
-//        System.out.println("rootPageId: " + rootPageId);
+
         insertHelper(rootPageId, key, value);
     }
 
@@ -67,17 +66,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         rootPageNode = new BPlusTreeLeafPageNode<>(key, value, rootPage.getPageId(), Config.INVALID_PAGE_ID, MAXDEGREE);
         rootPageId = rootPage.getPageId();
         ((BPlusTreeLeafPageNode<K, V>) rootPageNode).insertAndSort(key, value);
-
-        try {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ObjectOutput out = new ObjectOutputStream(bos);
-            out.writeObject(rootPageNode);
-            rootPage.setPageData(bos.toByteArray());
-            bufferManager.unpinPage(rootPageId, true);
-            bufferManager.flushPage(rootPageId);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        serializePageNode(rootPage);
     }
 
     /**
@@ -124,6 +113,10 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param leftLeafPageNode
+     */
     @SuppressWarnings("unchecked")
     private void splitLeafNode(BPlusTreeLeafPageNode<K, V> leftLeafPageNode) {
 //        System.out.println("leafNode isOversized");
@@ -185,6 +178,10 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param leftInnerPageNode
+     */
     @SuppressWarnings("unchecked")
     private void splitInnerNode(BPlusTreeInnerPageNode<K, V> leftInnerPageNode) {
 //        System.out.println("innerNode isOverSized");
@@ -253,11 +250,22 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param key
+     * @return
+     */
     public V find(K key) {
         BPlusTreeLeafPageNode<K, V> targetPageNode = findHelper(rootPageId, key);
         return targetPageNode == null ? null : targetPageNode.getValue(key);
     }
 
+    /**
+     *
+     * @param rootPageId
+     * @param key
+     * @return
+     */
     @SuppressWarnings("unchecked")
     private BPlusTreeLeafPageNode<K, V> findHelper(int rootPageId, K key) {
         BPlusTreePageNode<K, V> root = (BPlusTreePageNode<K, V>) deserializePageNode(rootPageId);
@@ -381,6 +389,18 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    private void serializePageNode(Page page) {
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutput out = new ObjectOutputStream(bos);
+            out.writeObject(rootPageNode);
+            page.setPageData(bos.toByteArray());
+            bufferManager.unpinPage(rootPageId, true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      *
      * @param page
@@ -410,6 +430,15 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param newPage
+     * @param leftPage
+     * @param rightPageNode
+     * @param leftPageNode
+     * @param bos
+     * @param out
+     */
     private void handleRootPageNode(Page newPage, Page leftPage,
                                     BPlusTreePageNode<K, V> rightPageNode,
                                     BPlusTreePageNode<K, V> leftPageNode,
@@ -420,6 +449,17 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         serializePageNode(rootPage, bos, out, rootPageNode);
     }
 
+    /**
+     *
+     * @param splitKey
+     * @param leftPageNode
+     * @param rightPageNode
+     * @param bis
+     * @param in
+     * @param bos
+     * @param out
+     * @return
+     */
     @SuppressWarnings("unchecked")
     private BPlusTreePageNode<K, V> handleParentPageNode(K splitKey,
                                       BPlusTreePageNode<K, V> leftPageNode,
