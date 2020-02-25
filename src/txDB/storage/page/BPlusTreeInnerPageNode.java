@@ -2,6 +2,7 @@ package txDB.storage.page;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.ListIterator;
 
 public class BPlusTreeInnerPageNode<K extends Comparable<K>, V> extends BPlusTreePageNode<K, V> implements Serializable {
@@ -18,6 +19,15 @@ public class BPlusTreeInnerPageNode<K extends Comparable<K>, V> extends BPlusTre
         children = new ArrayList<>();
         children.add(leftPage);
         children.add(rightPage);
+    }
+
+    public BPlusTreeInnerPageNode(List<K> ks, List<Integer> cd, int pageId, int parentPageId, int maxSize) {
+        setPageId(pageId);
+        setParentPageId(parentPageId);
+        setIndexPageType(IndexPageType.INNERPAGE);
+        setMaxSize(maxSize);
+        keys = new ArrayList<>(ks);
+        children = new ArrayList<>(cd);
     }
 
     public ArrayList<Integer> getChildren() {
