@@ -319,6 +319,38 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
     }
 
     /**
+     * traverse only leaf nodes in B+ tree
+     */
+    @SuppressWarnings("unchecked")
+    public void traverseLeafNodes() {
+        int curPageId = rootPageId;
+        BPlusTreeLeafPageNode<K, V> curLeafNode = traverseLeafNodesHelper(curPageId);
+
+        // curPageId = -1 will cause diskManager Negative Position Exception
+        while (curPageId != Config.INVALID_PAGE_ID) {
+            if (curPageId != rootPageId)
+                curLeafNode = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(curPageId);
+            if (curLeafNode != null) {
+                System.out.println(curLeafNode.getKeys() + ", " + curLeafNode.getValues());
+                curPageId = curLeafNode.getNextPageId();
+            } else break;
+        }
+    }
+
+    /**
+     * return the first leaf node using leftmost DFS
+     */
+    @SuppressWarnings("unchecked")
+    private BPlusTreeLeafPageNode<K, V> traverseLeafNodesHelper(int rootPageId) {
+        BPlusTreePageNode<K, V> root = (BPlusTreePageNode<K, V>) deserializePageNode(rootPageId);
+        if (root == null) return null;
+        else if (root.isLeafPageNode()) return ((BPlusTreeLeafPageNode<K, V>) root);
+        else {
+            return traverseLeafNodesHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(0));
+        }
+    }
+
+    /**
      *
      * @param pageId
      * @return
@@ -389,6 +421,10 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param page
+     */
     private void serializePageNode(Page page) {
         try {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();

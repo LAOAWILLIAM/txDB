@@ -47,14 +47,13 @@ public class DiskManager {
         int offset = pageId * Config.PAGE_SIZE;
         try {
 //            if (this.dbFileRead.read(pageData, offset, Config.PAGE_SIZE) == -1)
-            if (this.dbFileRead.getChannel().read(pageData, offset) == -1)
-                pageData = null;
+            if (this.dbFileRead.getChannel().read(pageData, offset) != -1)
+                return pageData.array();
         } catch (IOException e) {
             System.out.println(e);
-            return null;
         }
 
-        return pageData.array();
+        return null;
     }
 
     /**
