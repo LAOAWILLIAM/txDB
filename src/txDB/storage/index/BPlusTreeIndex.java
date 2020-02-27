@@ -63,7 +63,6 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      */
     private void startNewTree(K key, V value) {
         Page rootPage = bufferManager.newPage();
-//        if (rootPage == null) return;
         rootPageNode = new BPlusTreeLeafPageNode<>(key, value, rootPage.getPageId(), Config.INVALID_PAGE_ID, MAXDEGREE);
         rootPageId = rootPage.getPageId();
         ((BPlusTreeLeafPageNode<K, V>) rootPageNode).insertAndSort(key, value);
@@ -125,7 +124,6 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         K splitKey = leftLeafPageNode.getKeys().get(from);
 
         Page newPage = bufferManager.newPage();
-//        if (newPage == null) return;
         BPlusTreeLeafPageNode<K, V> rightLeafPageNode = new BPlusTreeLeafPageNode<>(
                 leftLeafPageNode.getKeys().subList(from, to),
                 leftLeafPageNode.getValues().subList(from, to),
@@ -164,7 +162,6 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
 //            System.out.println("root page node is leaf node");
             // it is the first time of splitting
             Page leftPage = bufferManager.newPage();
-//            if (newPage == null) return;
             leftLeafPageNode.setPageId(leftPage.getPageId());
             leftLeafPageNode.setParentPageId(rootPageId);
             rightLeafPageNode.setParentPageId(rootPageId);
@@ -201,7 +198,6 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         K splitKey = leftInnerPageNode.getKeys().get(from);
 
         Page newPage = bufferManager.newPage();
-//        if (newPage == null) return;
         BPlusTreeInnerPageNode<K, V> rightInnerPageNode = new BPlusTreeInnerPageNode<>(
                 leftInnerPageNode.getKeys().subList(from + 1, keysTo),
                 leftInnerPageNode.getChildren().subList(from + 1, childrenTo),
@@ -215,7 +211,6 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         Page leftPage;
         if (leftInnerPageNode.isRootPageNode()) {
             leftPage = bufferManager.newPage();
-//            if (newPage == null) return;
             leftInnerPageNode.setPageId(leftPage.getPageId());
         } else {
             leftPage = bufferManager.fetchPage(leftInnerPageNode.getPageId());

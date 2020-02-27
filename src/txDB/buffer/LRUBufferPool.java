@@ -141,8 +141,10 @@ public class LRUBufferPool {
              * new page cannot be put.
              */
             DLinkedNode evictNode = new DLinkedNode();
-            if (this.currentSize >= this.bufferSize && (evictNode = this.victim()) == null)
-                throw new RuntimeException("BUFFER EXCEEDED ERROR");
+            // when currentSize < bufferSize, we do not need to do victim()
+            if (this.currentSize >= this.bufferSize)
+                if ((evictNode = this.victim()) == null)
+                    throw new RuntimeException("BUFFER EXCEEDED ERROR");
 
             DLinkedNode newNode = new DLinkedNode();
             newNode.key = key;
