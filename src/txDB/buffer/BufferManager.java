@@ -3,9 +3,13 @@ package txDB.buffer;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.page.Page;
 
+import java.util.LinkedList;
+import java.util.Set;
+
 public class BufferManager {
     private LRUBufferPool lruBufferPool;
     private DiskManager diskManager;
+    private LinkedList<Page> freeList;
 
     /**
      *
@@ -15,6 +19,7 @@ public class BufferManager {
     public BufferManager(int bufferSize, DiskManager diskManager) {
         this.lruBufferPool = new LRUBufferPool(bufferSize, diskManager);
         this.diskManager = diskManager;
+        this.freeList = new LinkedList<>();
     }
 
     /**
@@ -26,6 +31,7 @@ public class BufferManager {
     public BufferManager(int bufferSize, float loadFactor, DiskManager diskManager) {
         this.lruBufferPool = new LRUBufferPool(bufferSize, loadFactor, diskManager);
         this.diskManager = diskManager;
+        this.freeList = new LinkedList<>();
     }
 
     /**
@@ -36,13 +42,19 @@ public class BufferManager {
     public Page fetchPage(int pageId) {
         synchronized (this) {
             Page requestPage;
-            if ((requestPage = this.lruBufferPool.get(pageId)) != null) {
+            if ((requestPage = this.lruBufferPool.get(pageId, true)) != null) {
                 requestPage.incrementPinCount();
                 return requestPage;
             }
 
             byte[] pageData = this.diskManager.readPage(pageId);
             if (pageData == null) return null;
+
+//            requestPage = this.findUnusedPage();
+//
+//            if (requestPage == null) {
+//                requestPage = new Page();
+//            }
 
             requestPage = new Page();
             requestPage.setPageData(pageData);
@@ -65,10 +77,11 @@ public class BufferManager {
     public boolean unpinPage(int pageId, boolean isDirty) {
         synchronized (this) {
             Page requestPage;
-            if ((requestPage = this.lruBufferPool.get(pageId)) == null) return false;
+            if ((requestPage = this.lruBufferPool.get(pageId, false)) == null) return false;
             if (requestPage.getPinCount() <= 0) return false;
 
-            requestPage.setPinCount(0);
+            requestPage.decrementPinCount();
+//            requestPage.setPinCount(0);
             requestPage.setDirty(isDirty);
 
             return true;
@@ -78,7 +91,7 @@ public class BufferManager {
     /**
      *
      */
-    public Page newPage() {
+    public Page newPage()  {
         // Allocating next page is thread safe based on atomicInteger
         int pageId = this.diskManager.allocatePage();
 
@@ -88,11 +101,24 @@ public class BufferManager {
             // as checking whether all pinned will take place in `lruBufferPool.put` method
             // if (this.lruBufferPool.allPinned()) return null;
 
-            Page requestPage = new Page();
-            requestPage.setPageId(pageId);
+            Page requestPage = this.findUnusedPage();
+
+            if (requestPage == null) {
+                requestPage = new Page();
+                requestPage.setPageId(pageId);
+            } else {
+                pageId = requestPage.getPageId();
+            }
+
             requestPage.setPinCount(1);
 
-            if (!this.lruBufferPool.put(pageId, requestPage)) return null;
+            if (!this.lruBufferPool.put(pageId, requestPage)) {
+                requestPage.setPinCount(0);
+                this.diskManager.revokeAllocatedPage();
+                return null;
+            }
+
+            this.freeList.poll();
 
             return requestPage;
         }
@@ -105,9 +131,12 @@ public class BufferManager {
      */
     public boolean flushPage(int pageId) {
         synchronized (this) {
-            Page requestPage = this.lruBufferPool.get(pageId);
+            Page requestPage = this.lruBufferPool.get(pageId, false);
             if (requestPage == null) return false;
-            if (requestPage.getPinCount() != 0) return false;
+            if (requestPage.getPinCount() != 0) {
+                System.out.println("pinCount: " + requestPage.getPinCount());
+                return false;
+            }
 
             if (requestPage.getIsDirty())
                 // TODO: writing page one by one is not efficient,
@@ -123,8 +152,9 @@ public class BufferManager {
     /**
      *
      */
-    public void fulshAllPages() {
-        // TODO
+    public void flushAllPages() {
+        // TODO: ConcurrentModificationException
+
     }
 
     /**
@@ -134,14 +164,26 @@ public class BufferManager {
      */
     public boolean deletePage(int pageId) {
         synchronized (this) {
-            Page requestPage = this.lruBufferPool.get(pageId);
+            Page requestPage = this.lruBufferPool.get(pageId, false);
             if (requestPage == null) return false;
             if (requestPage.getPinCount() != 0) return false;
 
+            requestPage.setDirty(false);
+            requestPage.setPinCount(0);
+            requestPage.resetData();
+
+            this.freeList.addLast(requestPage);
             this.lruBufferPool.delete(pageId);
             this.diskManager.deAllocatePage(pageId);
 
             return true;
         }
+    }
+
+    private Page findUnusedPage() {
+        if (!this.freeList.isEmpty()) {
+            return this.freeList.getFirst();
+        }
+        return null;
     }
 }

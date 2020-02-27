@@ -87,12 +87,17 @@ public class DiskManager {
     }
 
     /**
-
+     *
+     * @return
      */
     public int allocatePage() {
         int res = this.nextPageId.get();
         this.nextPageId.incrementAndGet();
         return res;
+    }
+
+    public void revokeAllocatedPage() {
+        this.nextPageId.decrementAndGet();
     }
 
     /**

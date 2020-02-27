@@ -84,4 +84,10 @@ public class BPlusTreeLeafPageNode<K extends Comparable<K>, V> extends BPlusTree
         }
         return null;
     }
+
+    public void remove(K key) {
+        int p = keys.indexOf(key);
+        keys.remove(p);
+        values.remove(p);
+    }
 }

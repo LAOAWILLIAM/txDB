@@ -16,7 +16,7 @@ public class Page {
         this.pageData = new byte[Config.PAGE_SIZE];
         this.isDirty = false;
         this.pinCount = 0;
-        this.resetData();
+//        this.resetData();
     }
 
     public byte[] getPageData() {
@@ -47,6 +47,10 @@ public class Page {
         this.pinCount++;
     }
 
+    public void decrementPinCount() {
+        this.pinCount--;
+    }
+
     public void setPageData(byte[] pageData) {
         if (pageData == null) this.resetData();
         else {
@@ -62,7 +66,7 @@ public class Page {
         this.isDirty = isDirty;
     }
 
-    private void resetData() {
+    public void resetData() {
         Arrays.fill(this.pageData, (byte)0);
     }
 }

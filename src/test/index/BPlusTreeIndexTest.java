@@ -223,10 +223,12 @@ public class BPlusTreeIndexTest {
 
         bpti.traverseAllNodes();
 
+//        bufferManager.flushAllPages();
+
         diskManager.close();
 
-        BufferManagerTest.deleteFile(dbFile);
-        BufferManagerTest.deleteFile(logFile);
+//        BufferManagerTest.deleteFile(dbFile);
+//        BufferManagerTest.deleteFile(logFile);
     }
 
     @Test

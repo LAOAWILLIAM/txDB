@@ -5,6 +5,7 @@ import txDB.storage.page.Page;
 //import txDB.storage.page.TablePage;
 
 import java.util.HashMap;
+import java.util.Set;
 //import java.util.concurrent.ConcurrentHashMap;
 
 public class LRUBufferPool {
@@ -105,6 +106,13 @@ public class LRUBufferPool {
         return res;
     }
 
+//    public Page victim() {
+//        DLinkedNode evictNode = this.victimHelper();
+//        if (this.currentSize >= this.bufferSize && evictNode == null)
+//            return null;
+//        else return evictNode.value;
+//    }
+
 //    public boolean allPinned() {
 //        if (this.currentSize < this.bufferSize)
 //            return false;
@@ -112,12 +120,12 @@ public class LRUBufferPool {
 //        return this.victim() == null;
 //    }
 
-    public Page get(int key) {
+    public Page get(int key, boolean applyLRU) {
         DLinkedNode node = this.bufferPool.get(key);
         if (node == null) return null;
 
-        // move the accessed node to the head;
-        this.moveToHead(node);
+        // if applyLRU is true, move the accessed node to the head;
+        if (applyLRU) this.moveToHead(node);
 
         return node.value;
     }
@@ -134,7 +142,7 @@ public class LRUBufferPool {
              */
             DLinkedNode evictNode = new DLinkedNode();
             if (this.currentSize >= this.bufferSize && (evictNode = this.victim()) == null)
-                return false;
+                throw new RuntimeException("BUFFER EXCEEDED ERROR");
 
             DLinkedNode newNode = new DLinkedNode();
             newNode.key = key;
@@ -154,11 +162,6 @@ public class LRUBufferPool {
                 this.currentSize--;
             }
         }
-//        else {
-//            // update the value.
-//            node.value = value;
-//            this.moveToHead(node);
-//        }
 
         return true;
     }
