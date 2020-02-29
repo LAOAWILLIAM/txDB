@@ -55,4 +55,10 @@ public class BPlusTreeInnerPageNode<K extends Comparable<K>, V> extends BPlusTre
             }
         }
     }
+
+    public void remove(int keyIndex) {
+        // TODO: may have bug
+        keys.remove(keyIndex);
+        children.remove(keyIndex + 1);
+    }
 }

@@ -67,6 +67,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         rootPageId = rootPage.getPageId();
         ((BPlusTreeLeafPageNode<K, V>) rootPageNode).insertAndSort(key, value);
         serializePageNode(rootPage, rootPageNode);
+//        this.bufferManager.unpinPage(rootPageId, true);
     }
 
     /**
@@ -94,6 +95,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                 if (bPlusTreePageNode.isOverSized()) {
                     splitLeafNode((BPlusTreeLeafPageNode<K, V>) bPlusTreePageNode);
                 }
+                this.bufferManager.unpinPage(rootPageId, true);
             } else {
                 if (key.compareTo(bPlusTreePageNode.getKeys().get(0)) < 0) {
                     insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(0), key, value);
@@ -107,6 +109,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                             insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(i), key, value);
                     }
                 }
+                this.bufferManager.unpinPage(rootPageId, false);
             }
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -150,6 +153,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                 out = new ObjectOutputStream(bos);
                 out.writeObject(nextLeafPageNode);
                 nextPage.setPageData(bos.toByteArray());
+                this.bufferManager.unpinPage(nextLeafPageNode.getPageId(), true);
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
@@ -167,17 +171,18 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
             rightLeafPageNode.setParentPageId(rootPageId);
             rootPageNode = new BPlusTreeInnerPageNode<>(splitKey, leftLeafPageNode.getPageId(), rightLeafPageNode.getPageId(), rootPageNode.getPageId(), rootPageNode.getParentPageId(), MAXDEGREE);
             handleRootPageNode(newPage, leftPage, rightLeafPageNode, leftLeafPageNode, bos, out);
-            bufferManager.unpinPage(newPage.getPageId(), true);
-            bufferManager.unpinPage(leftPage.getPageId(), true);
+//            bufferManager.unpinPage(newPage.getPageId(), true);
+//            bufferManager.unpinPage(leftPage.getPageId(), true);
+//            bufferManager.unpinPage(rootPageNode.getPageId(), true);
         } else {
             BPlusTreePageNode<K, V> parentPageNode = handleParentPageNode(splitKey, leftLeafPageNode, rightLeafPageNode, bis, in, bos, out);
 
             serializePageNode(newPage, bos, out, rightLeafPageNode);
-            bufferManager.unpinPage(newPage.getPageId(), true);
+//            bufferManager.unpinPage(newPage.getPageId(), true);
 
             Page leftPage = bufferManager.fetchPage(leftLeafPageNode.getPageId());
             serializePageNode(leftPage, bos, out, leftLeafPageNode);
-            bufferManager.unpinPage(leftPage.getPageId(), true);
+//            bufferManager.unpinPage(leftPage.getPageId(), true);
 
             if (parentPageNode.isOverSized()) {
                 splitInnerNode((BPlusTreeInnerPageNode<K, V>) parentPageNode);
@@ -245,23 +250,24 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
 
             rootPageNode = new BPlusTreeInnerPageNode<>(splitKey, leftInnerPageNode.getPageId(), rightInnerPageNode.getPageId(), rootPageNode.getPageId(), rootPageNode.getParentPageId(), MAXDEGREE);
             handleRootPageNode(newPage, leftPage, rightInnerPageNode, leftInnerPageNode, bos, out);
-            bufferManager.unpinPage(newPage.getPageId(), true);
-            bufferManager.unpinPage(leftPage.getPageId(), true);
+//            bufferManager.unpinPage(newPage.getPageId(), true);
+//            bufferManager.unpinPage(leftPage.getPageId(), true);
+//            bufferManager.unpinPage(rootPageNode.getPageId(), true);
         } else {
             BPlusTreePageNode<K, V> parentPageNode = handleParentPageNode(splitKey, leftInnerPageNode, rightInnerPageNode, bis, in, bos, out);
 
             rightInnerPageNode.setParentPageId(leftInnerPageNode.getParentPageId());
             serializePageNode(newPage, bos, out, rightInnerPageNode);
-            bufferManager.unpinPage(newPage.getPageId(), true);
+//            bufferManager.unpinPage(newPage.getPageId(), true);
 
             serializePageNode(leftPage, bos, out, leftInnerPageNode);
-            bufferManager.unpinPage(leftPage.getPageId(), true);
+//            bufferManager.unpinPage(leftPage.getPageId(), true);
 
             if (parentPageNode.isOverSized()) {
                 splitInnerNode((BPlusTreeInnerPageNode<K, V>) parentPageNode);
             }
 
-            bufferManager.unpinPage(parentPageNode.getPageId(), true);
+//            bufferManager.unpinPage(parentPageNode.getPageId(), true);
         }
     }
 
@@ -284,7 +290,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
     @SuppressWarnings("unchecked")
     private BPlusTreeLeafPageNode<K, V> findHelper(int rootPageId, K key) {
         BPlusTreePageNode<K, V> root = (BPlusTreePageNode<K, V>) deserializePageNode(rootPageId);
-
+        this.bufferManager.unpinPage(rootPageId, false);
         if (root != null) {
             if (root.getPageId() == Config.INVALID_PAGE_ID) return null;
             else if (root.isLeafPageNode()) return ((BPlusTreeLeafPageNode<K, V>) root);
@@ -329,8 +335,9 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                 serializePageNode(rootPage, root);
                 // -1 means root is both rootNode and leafNode, so we do not do redistribution
                 if (root.isUnderSized() && keyIndex != -1) {
-//                    redistributeLeafNode((BPlusTreeLeafPageNode<K, V>) root, keyIndex);
+                    redistributeLeafNode((BPlusTreeLeafPageNode<K, V>) root, rootPage, keyIndex);
                 }
+                this.bufferManager.unpinPage(rootPageId, true);
             } else {
                 if (key.compareTo(root.getKeys().get(0)) < 0) {
                     deleteHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(0), key, 0);
@@ -343,118 +350,212 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                             deleteHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(i), key, i);
                     }
                 }
+                this.bufferManager.unpinPage(rootPageId, false);
             }
         }
     }
 
-//    @SuppressWarnings("unchecked")
-//    private void redistributeLeafNode(BPlusTreeLeafPageNode<K, V> bPlusTreeLeafPageNode, int keyIndex) {
-//        // leaf node is at the leftmost when keyIndex == 0
-//        if (keyIndex == 0) {
-//            BPlusTreeLeafPageNode<K, V> bPlusTreeLeafPageNode1 = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(bPlusTreeLeafPageNode.getNextPageId());
-//            redistributeLeafNodeHelper(bPlusTreeLeafPageNode, bPlusTreeLeafPageNode1, keyIndex + 1);
-//        } else {
-//            BPlusTreeLeafPageNode<K, V> bPlusTreeLeafPageNode1 = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(bPlusTreeLeafPageNode.getPrevPageId());
-//            redistributeLeafNodeHelper(bPlusTreeLeafPageNode1, bPlusTreeLeafPageNode, keyIndex);
-//        }
-//    }
-//
-//    private void redistributeLeafNodeHelper(BPlusTreeLeafPageNode<K, V> smallNode, BPlusTreeLeafPageNode<K, V> largeNode, int keyIndex) {
-//        int totalSize = smallNode.keys.size() + largeNode.keys.size();
-////        System.out.println("keyIndex: " + keyIndex);
-////        System.out.println("totalSize: "+ totalSize);
-//        if (totalSize >= 2 * Math.round(MAXDEGREE / 2.0 - 1)) {
-//            /**
-//             * Reference: https://github.com/tiejian/database-hw2/blob/master/BPlusTree.java
-//             */
-//            // Store all keys and values from left to right
-//            ArrayList<K> keys = new ArrayList<>();
-//            ArrayList<V> vals = new ArrayList <>();
-//            keys.addAll(smallNode.keys);
-//            keys.addAll(largeNode.keys);
-//            vals.addAll(smallNode.values);
-//            vals.addAll(largeNode.values);
-//
-//            int leftSize = totalSize / 2;
-//
-//            smallNode.keys.clear();
-//            largeNode.keys.clear();
-//            smallNode.values.clear();
-//            largeNode.values.clear();
-//
-//            // Add first half keys and values into left and rest into right
-//            smallNode.keys.addAll(keys.subList(0, leftSize));
-//            smallNode.values.addAll(vals.subList(0, leftSize));
-//            largeNode.keys.addAll(keys.subList(leftSize, keys.size()));
-//            largeNode.values.addAll(vals.subList(leftSize, vals.size()));
-//
-//            smallNode.getParent().keys.set(keyIndex - 1, largeNode.keys.get(0));
-//        } else {
-//            mergeLeafNode(smallNode, largeNode, keyIndex - 1);
-//        }
-//    }
-//
-//    private void redistributeInnerNode(InnerNode<K, V> parent) {
-//        int i, parentIndex = -1;
-//        InnerNode<K, V> grandParent = (InnerNode<K, V>) parent.getParent();
-//
-//        // find index of parent in grandparent's children list
-//        for (i = 0; i < grandParent.children.size(); i++) {
-//            if (grandParent.children.get(i) == parent) {
-//                parentIndex = i;
-//                break;
-//            }
-//        }
-//
-////        System.out.println("parentIndex: " + parentIndex);
-//
-//        InnerNode<K, V> sibling;
-//        if (parentIndex == 0) {
-//            sibling = (InnerNode<K, V>) grandParent.children.get(parentIndex + 1);
-//            redistributeInnerNodeHelper(parent, sibling, parentIndex);
-//        } else {
-//            sibling = (InnerNode<K, V>) grandParent.children.get(parentIndex - 1);
-//            redistributeInnerNodeHelper(sibling, parent, parentIndex);
-//        }
-//    }
-//
-//    private void redistributeInnerNodeHelper(InnerNode<K, V> smallNode, InnerNode<K, V> largeNode, int parentIndex) {
-//        int totalSize = smallNode.keys.size() + largeNode.keys.size();
-////        System.out.println("inner totalSize: " + totalSize);
-//        if (totalSize >= 2 * Math.round(MAXDEGREE / 2.0 - 1)) {
-//            /**
-//             * Reference: https://github.com/tiejian/database-hw2/blob/master/BPlusTree.java
-//             */
-//            // Store all keys and values from left to right
-//            ArrayList<K> keys = new ArrayList<>();
-//            ArrayList<Node<K, V>> kids = new ArrayList<>();
-//            keys.addAll(smallNode.keys);
-//            keys.add(smallNode.getParent().keys.get(parentIndex));
-//            keys.addAll(largeNode.keys);
-//            kids.addAll(smallNode.children);
-//            kids.addAll(largeNode.children);
-//
-//            // Get the index of the new parent key
-//            int newIndex = keys.size() / 2;
-//            if (keys.size() % 2 == 0) {
-//                newIndex -= 1;
-//            }
-//            smallNode.getParent().keys.set(parentIndex, keys.get(newIndex));
-//
-//            smallNode.keys.clear();
-//            largeNode.keys.clear();
-//            smallNode.children.clear();
-//            largeNode.children.clear();
-//
-//            // Add first half keys and values into left and rest into right
-//            smallNode.keys.addAll(keys.subList(0, newIndex));
-//            largeNode.keys.addAll(keys.subList(newIndex + 1, keys.size()));
-//            smallNode.children.addAll(kids.subList(0, newIndex + 1));
-//            largeNode.children.addAll(kids.subList(newIndex + 1, kids.size()));
-//        } else {
-//            mergeInnerNode(smallNode, largeNode, parentIndex);
-//        }
-//    }
+    @SuppressWarnings("unchecked")
+    private void redistributeLeafNode(BPlusTreeLeafPageNode<K, V> bPlusTreeLeafPageNode, Page bPlusTreeLeafPage, int keyIndex) {
+        Page bPlusTreeLeafPage1 = bufferManager.fetchPage(bPlusTreeLeafPageNode.getNextPageId());
+        // leaf node is at the leftmost when keyIndex == 0
+        if (keyIndex == 0) {
+            BPlusTreeLeafPageNode<K, V> bPlusTreeLeafPageNode1 = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(bPlusTreeLeafPage1);
+            if (bPlusTreeLeafPageNode1 != null) redistributeLeafNodeHelper(bPlusTreeLeafPage, bPlusTreeLeafPageNode, bPlusTreeLeafPage1, bPlusTreeLeafPageNode1, keyIndex + 1);
+        } else {
+            BPlusTreeLeafPageNode<K, V> bPlusTreeLeafPageNode1 = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(bPlusTreeLeafPageNode.getPrevPageId());
+            if (bPlusTreeLeafPageNode1 != null) redistributeLeafNodeHelper(bPlusTreeLeafPage1, bPlusTreeLeafPageNode1, bPlusTreeLeafPage, bPlusTreeLeafPageNode, keyIndex);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void redistributeLeafNodeHelper(Page page, BPlusTreeLeafPageNode<K, V> smallNode, Page page1, BPlusTreeLeafPageNode<K, V> largeNode, int keyIndex) {
+        int totalSize = smallNode.getKeys().size() + largeNode.getKeys().size();
+//        System.out.println("keyIndex: " + keyIndex);
+//        System.out.println("totalSize: "+ totalSize);
+        if (totalSize >= 2 * Math.round(MAXDEGREE / 2.0 - 1)) {
+            /**
+             * Reference: https://github.com/tiejian/database-hw2/blob/master/BPlusTree.java
+             */
+            // Store all keys and values from left to right
+            ArrayList<K> keys = new ArrayList<>();
+            ArrayList<V> vals = new ArrayList <>();
+            keys.addAll(smallNode.getKeys());
+            keys.addAll(largeNode.getKeys());
+            vals.addAll(smallNode.getValues());
+            vals.addAll(largeNode.getValues());
+
+            int leftSize = totalSize / 2;
+
+            smallNode.getKeys().clear();
+            largeNode.getKeys().clear();
+            smallNode.getValues().clear();
+            largeNode.getValues().clear();
+
+            // Add first half keys and values into left and rest into right
+            smallNode.getKeys().addAll(keys.subList(0, leftSize));
+            smallNode.getValues().addAll(vals.subList(0, leftSize));
+            largeNode.getKeys().addAll(keys.subList(leftSize, keys.size()));
+            largeNode.getValues().addAll(vals.subList(leftSize, vals.size()));
+
+            serializePageNode(page, smallNode);
+            serializePageNode(page1, largeNode);
+
+            Page parentPage = bufferManager.fetchPage(smallNode.getParentPageId());
+            BPlusTreeInnerPageNode<K, V> parentNode = (BPlusTreeInnerPageNode<K, V>) deserializePageNode(parentPage);
+            if (parentNode != null) {
+                parentNode.getKeys().set(keyIndex - 1, largeNode.getKeys().get(0));
+                serializePageNode(parentPage, parentNode);
+            }
+        } else {
+            mergeLeafNode(page, smallNode, page1, largeNode, keyIndex - 1);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void redistributeInnerNode(Page parentPage, BPlusTreeInnerPageNode<K, V> parentNode) {
+        int i, parentIndex = -1;
+        Page grandParentPage = bufferManager.fetchPage(parentNode.getParentPageId());
+        BPlusTreeInnerPageNode<K, V> grandParent = (BPlusTreeInnerPageNode<K, V>) deserializePageNode(grandParentPage);
+
+        if (grandParent != null) {
+            // find index of parent in grandparent's children list
+            for (i = 0; i < grandParent.getChildren().size(); i++) {
+                if (grandParent.getChildren().get(i) == parentNode.getPageId()) {
+                    parentIndex = i;
+                    break;
+                }
+            }
+
+//        System.out.println("parentIndex: " + parentIndex);
+
+            BPlusTreeInnerPageNode<K, V> sibling;
+            if (parentIndex == 0) {
+                Page siblingPage = bufferManager.fetchPage(grandParent.getChildren().get(parentIndex + 1));
+                sibling = (BPlusTreeInnerPageNode<K, V>) deserializePageNode(siblingPage);
+                if (sibling != null) redistributeInnerNodeHelper(parentPage, parentNode, siblingPage, sibling, parentIndex);
+            } else {
+                Page siblingPage = bufferManager.fetchPage(grandParent.getChildren().get(parentIndex - 1));
+                sibling = (BPlusTreeInnerPageNode<K, V>) deserializePageNode(siblingPage);
+                if (sibling != null) redistributeInnerNodeHelper(siblingPage, sibling, parentPage, parentNode, parentIndex - 1);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void redistributeInnerNodeHelper(Page page, BPlusTreeInnerPageNode<K, V> smallNode, Page page1, BPlusTreeInnerPageNode<K, V> largeNode, int parentIndex) {
+        int totalSize = smallNode.getKeys().size() + largeNode.getKeys().size();
+//        System.out.println("inner totalSize: " + totalSize);
+        if (totalSize >= 2 * Math.round(MAXDEGREE / 2.0 - 1)) {
+            Page parentPage = bufferManager.fetchPage(smallNode.getParentPageId());
+            BPlusTreeInnerPageNode<K, V> parentNode = (BPlusTreeInnerPageNode<K, V>) deserializePageNode(parentPage);
+
+            if (parentNode != null) {
+                /**
+                 * Reference: https://github.com/tiejian/database-hw2/blob/master/BPlusTree.java
+                 */
+                // Store all keys and values from left to right
+                ArrayList<K> keys = new ArrayList<>();
+                ArrayList<Integer> kids = new ArrayList<>();
+                keys.addAll(smallNode.getKeys());
+                keys.add(parentNode.getKeys().get(parentIndex));
+                keys.addAll(largeNode.getKeys());
+                kids.addAll(smallNode.getChildren());
+                kids.addAll(largeNode.getChildren());
+
+                // Get the index of the new parent key
+                int newIndex = keys.size() / 2;
+                if (keys.size() % 2 == 0) {
+                    newIndex -= 1;
+                }
+                parentNode.getKeys().set(parentIndex, keys.get(newIndex));
+
+                smallNode.getKeys().clear();
+                largeNode.getKeys().clear();
+                smallNode.getChildren().clear();
+                largeNode.getChildren().clear();
+
+                // Add first half keys and values into left and rest into right
+                smallNode.getKeys().addAll(keys.subList(0, newIndex));
+                largeNode.getKeys().addAll(keys.subList(newIndex + 1, keys.size()));
+                smallNode.getChildren().addAll(kids.subList(0, newIndex + 1));
+                largeNode.getChildren().addAll(kids.subList(newIndex + 1, kids.size()));
+
+                serializePageNode(page, smallNode);
+                serializePageNode(page1, largeNode);
+                serializePageNode(parentPage, parentNode);
+            }
+        } else {
+            mergeInnerNode(page, smallNode, page1, largeNode, parentIndex);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeLeafNode(Page page, BPlusTreeLeafPageNode<K, V> smallNode, Page page1, BPlusTreeLeafPageNode<K, V> largeNode, int keyIndex) {
+        smallNode.getKeys().addAll(largeNode.getKeys());
+        smallNode.getValues().addAll(largeNode.getValues());
+
+        smallNode.setNextPageId(largeNode.getNextPageId());
+        if (largeNode.getNextPageId() != Config.INVALID_PAGE_ID) {
+            Page nextPage = bufferManager.fetchPage(largeNode.getNextPageId());
+            BPlusTreeLeafPageNode<K, V> nextNode = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(nextPage);
+            if (nextNode != null) nextNode.setPrevPageId(smallNode.getPageId());
+            serializePageNode(nextPage, nextNode);
+        }
+
+        Page parentPage = bufferManager.fetchPage(smallNode.getParentPageId());
+        BPlusTreeInnerPageNode<K, V> parentNode = (BPlusTreeInnerPageNode<K, V>) deserializePageNode(parentPage);
+        if (parentNode != null) {
+//            System.out.println(parentNode.getChildren().get(keyIndex + 1) + ", " + largeNode.getPageId());
+            bufferManager.deletePage(parentNode.getChildren().get(keyIndex + 1));
+            parentNode.remove(keyIndex);
+
+            serializePageNode(page, smallNode);
+            serializePageNode(parentPage, parentNode);
+
+            if (!parentNode.isRootPageNode() && parentNode.isUnderSized()) {
+                redistributeInnerNode(parentPage, parentNode);
+            }
+
+            if (parentNode.isRootPageNode() && parentNode.getKeys().size() == 0) {
+                rootPageNode = smallNode;
+                rootPageId = smallNode.getPageId();
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeInnerNode(Page page, BPlusTreeInnerPageNode<K, V> smallNode, Page page1, BPlusTreeInnerPageNode<K, V> largeNode, int parentIndex) {
+//        System.out.println("inner parentIndex: " + parentIndex);
+        Page parentPage = bufferManager.fetchPage(smallNode.getParentPageId());
+        BPlusTreeInnerPageNode<K, V> parentNode = (BPlusTreeInnerPageNode<K, V>) deserializePageNode(parentPage);
+
+        if (parentNode != null) {
+//            System.out.println(parentNode.getKeys());
+            smallNode.getKeys().add(parentNode.getKeys().get(parentIndex));
+            smallNode.getKeys().addAll(largeNode.getKeys());
+            smallNode.getChildren().addAll(largeNode.getChildren());
+
+            bufferManager.deletePage(parentNode.getChildren().get(parentIndex + 1));
+            parentNode.remove(parentIndex);
+
+            serializePageNode(page, smallNode);
+            serializePageNode(parentPage, parentNode);
+
+//            System.out.println("inner parent keys: " + parent.keys);
+
+            if (!parentNode.isRootPageNode() && parentNode.isUnderSized()) {
+                redistributeInnerNode(parentPage, parentNode);
+            }
+
+            if (parentNode.isRootPageNode() && parentNode.getKeys().size() == 0) {
+                rootPageNode = smallNode;
+                rootPageId = smallNode.getPageId();
+                smallNode.setParentPageId(Config.INVALID_PAGE_ID);
+                serializePageNode(page, smallNode);
+            }
+        }
+    }
 
     /**
      * traverse the whole B+ tree using BFS
@@ -478,6 +579,8 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                         }
                     }
                 }
+
+                this.bufferManager.unpinPage(curPageId, false);
             }
         }
     }
@@ -498,6 +601,8 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                 System.out.println(curLeafNode.getKeys() + ", " + curLeafNode.getValues());
                 curPageId = curLeafNode.getNextPageId();
             } else break;
+
+            bufferManager.unpinPage(curPageId, false);
         }
     }
 
@@ -612,7 +717,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
             ObjectOutput out = new ObjectOutputStream(bos);
             out.writeObject(pageNode);
             page.setPageData(bos.toByteArray());
-//            bufferManager.unpinPage(pageNode.getPageId(), true);
+            bufferManager.unpinPage(pageNode.getPageId(), true);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -628,7 +733,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
     private void serializePageNode(Page page, ByteArrayOutputStream bos, ObjectOutput out, BPlusTreePageNode<K, V> bPlusTreePageNode) {
         serializePageNodeHelper(bos, out, bPlusTreePageNode);
         page.setPageData(bos.toByteArray());
-//        bufferManager.unpinPage(page.getPageId(), true);
+        bufferManager.unpinPage(page.getPageId(), true);
     }
 
     /**
@@ -664,6 +769,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         serializePageNode(leftPage, bos, out, leftPageNode);
         Page rootPage = bufferManager.fetchPage(rootPageNode.getPageId());
         serializePageNode(rootPage, bos, out, rootPageNode);
+        bufferManager.unpinPage(rootPage.getPageId(), true);
     }
 
     /**
@@ -690,6 +796,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         if (parentPageNode != null) {
             ((BPlusTreeInnerPageNode<K, V>) parentPageNode).insertAndSort(splitKey, rightPageNode.getPageId());
             serializePageNode(parentPage, bos, out, parentPageNode);
+            bufferManager.unpinPage(parentPageNode.getPageId(), true);
         }
         return parentPageNode;
     }

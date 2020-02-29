@@ -154,7 +154,9 @@ public class BufferManager {
      */
     public void flushAllPages() {
         // TODO: ConcurrentModificationException
-
+        for (int pageId: this.lruBufferPool.getAll()) {
+            System.out.println( pageId+ ": " + this.lruBufferPool.get(pageId, false).getPinCount());
+        }
     }
 
     /**

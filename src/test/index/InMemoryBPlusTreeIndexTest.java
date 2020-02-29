@@ -136,7 +136,7 @@ public class InMemoryBPlusTreeIndexTest {
     }
 
     @Test
-    public void largeInsertTest() {
+    public void insertScaleTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(10);
         assertNull(bpt.find(5));
 
@@ -229,7 +229,7 @@ public class InMemoryBPlusTreeIndexTest {
 
     @Test
     public void deleteWithRedistributeAndMergeTest() {
-        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(5);
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
         assertNull(bpt.find(5));
 
         bpt.insert(5, 100);
@@ -243,7 +243,7 @@ public class InMemoryBPlusTreeIndexTest {
         assertEquals(bpt.find(20), new Integer(103));
         assertEquals(bpt.find(30), new Integer(104));
 
-        bpt.traverseLeafNodes();
+//        bpt.traverseAllNodes();
 
         bpt.delete(13);
         assertNull(bpt.find(13));
@@ -251,17 +251,16 @@ public class InMemoryBPlusTreeIndexTest {
 
         bpt.delete(20);
         assertNull(bpt.find(20));
-        bpt.traverseAllNodes();
 
         assertEquals(bpt.find(5), new Integer(100));
         assertEquals(bpt.find(9), new Integer(101));
         assertEquals(bpt.find(30), new Integer(104));
 
-        bpt.traverseLeafNodes();
+//        bpt.traverseLeafNodes();
     }
 
     @Test
-    public void deleteTest() {
+    public void deleteScaleTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
         assertNull(bpt.find(5));
 

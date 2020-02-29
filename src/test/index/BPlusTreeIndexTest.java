@@ -223,7 +223,7 @@ public class BPlusTreeIndexTest {
 
         bpti.traverseAllNodes();
 
-//        bufferManager.flushAllPages();
+        bufferManager.flushAllPages();
 
         diskManager.close();
 
@@ -232,7 +232,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void largeInsertTest() {
+    public void insertScaleTest() {
         String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);
@@ -313,5 +313,73 @@ public class BPlusTreeIndexTest {
         assertEquals(bpti.find(100), new Integer(116));
 
         bpti.traverseLeafNodes();
+    }
+
+    @Test
+    public void deleteWithRedistributeAndMergeTest() {
+        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
+        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
+        File dbFile = new File(dbFilePath);
+        File logFile = new File(logFilePath);
+
+        int bufferSize = 100;
+        DiskManager diskManager = new DiskManager(dbFilePath);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3);
+
+        bpti.insert(5, 100);
+        bpti.insert(9, 101);
+        bpti.insert(13, 102);
+        bpti.insert(20, 103);
+        bpti.insert(30, 104);
+        assertEquals(bpti.find(5), new Integer(100));
+        assertEquals(bpti.find(9), new Integer(101));
+        assertEquals(bpti.find(13), new Integer(102));
+        assertEquals(bpti.find(20), new Integer(103));
+        assertEquals(bpti.find(30), new Integer(104));
+
+//        bpti.traverseLeafNodes();
+
+        bpti.delete(13);
+        assertNull(bpti.find(13));
+//        bpti.traverseAllNodes();
+
+        bpti.delete(20);
+        assertNull(bpti.find(20));
+//        bpti.traverseAllNodes();
+
+        assertEquals(bpti.find(5), new Integer(100));
+        assertEquals(bpti.find(9), new Integer(101));
+        assertEquals(bpti.find(30), new Integer(104));
+
+        bpti.traverseLeafNodes();
+    }
+
+    @Test
+    public void deleteScaleTest() {
+        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
+        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
+        File dbFile = new File(dbFilePath);
+        File logFile = new File(logFilePath);
+
+        int bufferSize = 10000;
+        DiskManager diskManager = new DiskManager(dbFilePath);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100);
+
+        int max = 10000, i;
+        for(i = 0; i < max; i++) {
+            bpti.insert(i, i);
+//            assertEquals(bpti.find(i), new Integer(i));
+        }
+
+        for(i = 0; i < max; i++) {
+            bpti.delete(i);
+            assertNull(bpti.find(i));
+            if (i < max - 1)
+                assertEquals(bpti.find(i + 1), new Integer(i + 1));
+        }
     }
 }

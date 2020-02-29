@@ -490,7 +490,7 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
             }
         }
 
-//        System.out.println("parentIndex: " + parentIndex);
+        System.out.println("parentIndex: " + parentIndex);
 
         InnerNode<K, V> sibling;
         if (parentIndex == 0) {
@@ -498,7 +498,7 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
             redistributeInnerNodeHelper(parent, sibling, parentIndex);
         } else {
             sibling = (InnerNode<K, V>) grandParent.children.get(parentIndex - 1);
-            redistributeInnerNodeHelper(sibling, parent, parentIndex);
+            redistributeInnerNodeHelper(sibling, parent, parentIndex - 1);
         }
     }
 

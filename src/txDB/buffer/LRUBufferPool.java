@@ -177,4 +177,8 @@ public class LRUBufferPool {
             this.currentSize--;
         }
     }
+
+    public Set<Integer> getAll() {
+        return this.bufferPool.keySet();
+    }
 }
