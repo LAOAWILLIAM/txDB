@@ -367,9 +367,9 @@ public class BPlusTreeIndexTest {
         DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 200);
 
-        int max = 10000, i;
+        int max = 100000, i;
         for(i = 0; i < max; i++) {
             bpti.insert(i, i);
 //            assertEquals(bpti.find(i), new Integer(i));
@@ -378,8 +378,8 @@ public class BPlusTreeIndexTest {
         for(i = 0; i < max; i++) {
             bpti.delete(i);
             assertNull(bpti.find(i));
-            if (i < max - 1)
-                assertEquals(bpti.find(i + 1), new Integer(i + 1));
+//            if (i < max - 1)
+//                assertEquals(bpti.find(i + 1), new Integer(i + 1));
         }
     }
 }

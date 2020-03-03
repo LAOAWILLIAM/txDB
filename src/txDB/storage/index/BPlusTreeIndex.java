@@ -11,7 +11,7 @@ import java.util.*;
  * This class is a disk-based B+ tree
  */
 public class BPlusTreeIndex<K extends Comparable<K>, V> {
-    // TODO: some code need to be refactored !!!
+    // TODO: thread-safe nneded
     private BufferManager bufferManager;
     private int rootPageId;
     private BPlusTreePageNode<K, V> rootPageNode;
