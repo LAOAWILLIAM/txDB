@@ -1,4 +1,4 @@
-package test.index;
+package test.storage.index;
 
 import org.junit.Test;
 

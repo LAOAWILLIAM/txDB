@@ -1,4 +1,4 @@
-package test.index;
+package test.storage.index;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -378,8 +378,8 @@ public class BPlusTreeIndexTest {
         for(i = 0; i < max; i++) {
             bpti.delete(i);
             assertNull(bpti.find(i));
-//            if (i < max - 1)
-//                assertEquals(bpti.find(i + 1), new Integer(i + 1));
+            if (i < max - 1)
+                assertEquals(bpti.find(i + 1), new Integer(i + 1));
         }
     }
 }
