@@ -45,6 +45,21 @@ public class TablePage extends Page {
         super();
     }
 
+    public TablePage(Page page) {
+        setPageId(page.getPageId());
+        setPinCount(page.getPinCount());
+        setPageData(page.getPageData());
+        setDirty(page.getIsDirty());
+    }
+
+    public void initialize(int pageId, int pageSize, int prevPageId, LogManager logManager, Transaction txn) {
+        setTablePageId(pageId);
+        setPrevPageId(prevPageId);
+        setNextPageId(Config.INVALID_PAGE_ID);
+        setFreeSpacePointer(pageSize);
+        setTupleCount(0);
+    }
+
     /**
      *
      * @return
@@ -109,6 +124,7 @@ public class TablePage extends Page {
      */
     public Tuple getTuple(RecordID rid, Transaction txn, LockManager lockManager) {
         int tupleIndex = rid.getTupleIndex();
+        System.out.println(tupleIndex);
         if (tupleIndex > getTupleCount()) {
             if (Config.ENABLE_LOGGING) {
                 // abort this transaction
@@ -118,6 +134,7 @@ public class TablePage extends Page {
         }
 
         int tupleSize = getTupleSize(tupleIndex);
+        System.out.println(tupleSize);
         if (tupleIsDeleted(tupleSize)) {
             if (Config.ENABLE_LOGGING) {
                 // abort this transaction
@@ -133,15 +150,13 @@ public class TablePage extends Page {
         int tupleOffset = getTupleOffset(tupleIndex);
         byte[] tupleData = new byte[tupleSize];
         ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
-        pageBuffer.get(tupleData, tupleOffset, tupleSize);
+        System.out.println(tupleOffset + ", " + tupleSize);
+        int i;
+        for (i = 0; i < tupleSize; i++) {
+            tupleData[i] = pageBuffer.get(tupleOffset + i);
+        }
 
-        Tuple newTuple = new Tuple();
-        newTuple.setTupleSize(tupleSize);
-        newTuple.setRecordID(rid);
-        newTuple.setAllocated(true);
-        newTuple.setTupleData(tupleData);
-
-        return newTuple;
+        return new Tuple(tupleData, rid, tupleSize, true);
     }
 
     /**
@@ -289,7 +304,10 @@ public class TablePage extends Page {
 
     private void setTupleData(byte[] tupleData, int offset, int length) {
         ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
-        pageBuffer.put(tupleData, offset, length);
+        int i;
+        for (i = 0; i < length; i++) {
+            pageBuffer.put(offset + i, tupleData[i]);
+        }
         this.setPageData(pageBuffer.array());
     }
 
@@ -298,6 +316,7 @@ public class TablePage extends Page {
     }
 
     private boolean tupleIsDeleted(int tupleSize) {
+        System.out.println("&: " + (tupleSize & DELETE_MASK));
         return tupleSize == 0 || (tupleSize & DELETE_MASK) == 0;
     }
 

@@ -74,14 +74,10 @@ public class BufferManagerTest {
         Page page;
         for (i = 0; i < bufferSize; i++) {
             assertNotNull(page = bufferManager.newPage());
-            /**
-             * `instanceof` needed to avoid `ClassCastException`
-             */
-            if (page instanceof TablePage) {
-                TablePage tablePage = (TablePage) page;
-                tablePage.setPrevPageId(i - 1);
-                tablePage.setNextPageId(i + 1);
-            }
+            TablePage tablePage = new TablePage(page);
+            bufferManager.replacePage(tablePage);
+            tablePage.setPrevPageId(i - 1);
+            tablePage.setNextPageId(i + 1);
         }
 
         for (i = 0; i < bufferSize; i++) {
@@ -94,14 +90,10 @@ public class BufferManagerTest {
 
         page = bufferManager.fetchPage(5000);
 //        System.out.println(new String(page5000.getPageData()));
-        /**
-         * `instanceof` needed to avoid `ClassCastException`
-         */
-        if (page instanceof TablePage) {
-            TablePage page5000 = (TablePage) page;
-            assertEquals(page5000.getPrevPageId(), 4999);
-            assertEquals(page5000.getNextPageId(), 5001);
-        }
+        TablePage page5000 = new TablePage(page);
+        bufferManager.replacePage(page5000);
+        assertEquals(page5000.getPrevPageId(), 4999);
+        assertEquals(page5000.getNextPageId(), 5001);
 
         diskManager.close();
 

@@ -2,6 +2,7 @@ package txDB.buffer;
 
 import txDB.storage.disk.DiskManager;
 import txDB.storage.page.Page;
+import txDB.storage.page.TablePage;
 
 import java.util.LinkedList;
 import java.util.Set;
@@ -179,6 +180,12 @@ public class BufferManager {
             this.diskManager.deAllocatePage(pageId);
 
             return true;
+        }
+    }
+
+    public void replacePage(Page page) {
+        synchronized (this) {
+            this.lruBufferPool.replace(page);
         }
     }
 

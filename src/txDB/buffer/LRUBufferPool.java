@@ -181,4 +181,9 @@ public class LRUBufferPool {
     public Set<Integer> getAll() {
         return this.bufferPool.keySet();
     }
+
+    public void replace(Page page) {
+        DLinkedNode node = this.bufferPool.get(page.getPageId());
+        node.value = page;
+    }
 }
