@@ -86,6 +86,12 @@ public class Tuple {
         return null;
     }
 
+    /**
+     * A simple function to serialize byte data to column value
+     * @param tupleData
+     * @param column
+     * @param value
+     */
     private void serialize(byte[] tupleData, Column column, Object value) {
         ByteBuffer byteBuffer = ByteBuffer.wrap(tupleData);
         switch (column.getColumnValueType()) {
@@ -120,7 +126,7 @@ public class Tuple {
     }
 
     /**
-     * A simple function to deserialize column value to basic data type
+     * A simple function to deserialize column value to byte data
      * @param tupleDataPtr
      * @param columnValueType
      * @return

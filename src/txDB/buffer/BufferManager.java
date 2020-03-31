@@ -4,7 +4,9 @@ import txDB.storage.disk.DiskManager;
 import txDB.storage.page.Page;
 import txDB.storage.page.TablePage;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.ListIterator;
 import java.util.Set;
 
 public class BufferManager {
@@ -44,12 +46,17 @@ public class BufferManager {
         synchronized (this) {
             Page requestPage;
             if ((requestPage = this.lruBufferPool.get(pageId, true)) != null) {
+                if (requestPage.getIsDirty())
+                    this.diskManager.writePage(pageId, requestPage.getPageData());
                 requestPage.incrementPinCount();
                 return requestPage;
             }
 
             byte[] pageData = this.diskManager.readPage(pageId);
-            if (pageData == null) return null;
+            if (pageData == null) {
+//                System.out.println("1 unable to fetch page " + pageId);
+                return null;
+            }
 
 //            requestPage = this.findUnusedPage();
 //
@@ -63,7 +70,10 @@ public class BufferManager {
             requestPage.setPinCount(1);
             requestPage.setDirty(false);
 
-            if (!this.lruBufferPool.put(pageId, requestPage)) return null;
+            if (!this.lruBufferPool.put(pageId, requestPage)) {
+//                System.out.println("2 unable to fetch page " + pageId);
+                return null;
+            }
 
             return requestPage;
         }
@@ -80,6 +90,8 @@ public class BufferManager {
             Page requestPage;
             if ((requestPage = this.lruBufferPool.get(pageId, false)) == null) return false;
             if (requestPage.getPinCount() <= 0) return false;
+
+//            System.out.println("enter effective unpin area in page " + pageId + ", dirty: " + isDirty);
 
             requestPage.decrementPinCount();
 //            requestPage.setPinCount(0);
@@ -114,6 +126,7 @@ public class BufferManager {
             requestPage.setPinCount(1);
 
             if (!this.lruBufferPool.put(pageId, requestPage)) {
+//                System.out.println("unable to new page");
                 requestPage.setPinCount(0);
                 this.diskManager.revokeAllocatedPage();
                 return null;
@@ -154,9 +167,23 @@ public class BufferManager {
      *
      */
     public void flushAllPages() {
-        // TODO: ConcurrentModificationException
-        for (int pageId: this.lruBufferPool.getAll()) {
-            System.out.println( pageId+ ": " + this.lruBufferPool.get(pageId, false).getPinCount());
+        synchronized (this) {
+            ArrayList<Integer> flushList = new ArrayList<>();
+            for (int pageId: this.lruBufferPool.getAll()) {
+//                System.out.println(pageId+ ": " + this.lruBufferPool.get(pageId, false).getPinCount());
+                Page page = this.lruBufferPool.get(pageId, false);
+                flushList.add(pageId);
+                if (page.getIsDirty()) {
+                    this.diskManager.writePage(pageId, page.getPageData());
+//                    System.out.println("page " + pageId + " is flushed");
+                }
+            }
+
+            int i;
+            for (i = 0; i < flushList.size(); i++) {
+//                System.out.println("page " + flushList.get(i) + " is deleted");
+                this.lruBufferPool.delete(flushList.get(i));
+            }
         }
     }
 
@@ -190,9 +217,16 @@ public class BufferManager {
     }
 
     private Page findUnusedPage() {
-        if (!this.freeList.isEmpty()) {
-            return this.freeList.getFirst();
+        synchronized (this) {
+            if (!this.freeList.isEmpty()) {
+                return this.freeList.getFirst();
+            }
+            return null;
         }
-        return null;
+    }
+
+    // test helper function
+    public int getSize() {
+        return this.lruBufferPool.getAll().size();
     }
 }

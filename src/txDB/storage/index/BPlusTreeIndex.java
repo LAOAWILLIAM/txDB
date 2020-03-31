@@ -15,6 +15,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
     private BufferManager bufferManager;
     private int rootPageId;
     private BPlusTreePageNode<K, V> rootPageNode;
+    // TODO: max degree should be based on key and value size
     private static int MAXDEGREE;
 
     @SuppressWarnings("unchecked")
@@ -31,7 +32,13 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
+        } else {
+            startNewTree();
         }
+    }
+
+    public int getRootPageId() {
+        return this.rootPageId;
     }
 
     /**
@@ -42,13 +49,27 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         return rootPageId == Config.INVALID_PAGE_ID;
     }
 
+    private boolean isInitialized() {
+        Page rootPage = bufferManager.fetchPage(rootPageId);
+        byte[] rootPageData = rootPage.getPageData();
+        for (byte b : rootPageData) {
+            if (b != 0) {
+                bufferManager.unpinPage(rootPageId, false);
+                return true;
+            }
+        }
+        bufferManager.unpinPage(rootPageId, false);
+        return false;
+    }
+
     /**
      *
      * @param key
      * @param value
      */
     public void insert(K key, V value) {
-        if (isEmpty()) {
+//        if (isEmpty()) {
+        if (!isInitialized()) {
             startNewTree(key, value);
             return;
         }
@@ -62,12 +83,21 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      * @param value
      */
     private void startNewTree(K key, V value) {
-        Page rootPage = bufferManager.newPage();
-        rootPageNode = new BPlusTreeLeafPageNode<>(key, value, rootPage.getPageId(), Config.INVALID_PAGE_ID, MAXDEGREE);
-        rootPageId = rootPage.getPageId();
+//        Page rootPage = bufferManager.newPage();
+//        rootPageNode = new BPlusTreeLeafPageNode<>(key, value, rootPage.getPageId(), Config.INVALID_PAGE_ID, MAXDEGREE);
+//        rootPageId = rootPage.getPageId();
+//        ((BPlusTreeLeafPageNode<K, V>) rootPageNode).insertAndSort(key, value);
+//        serializePageNode(rootPage, rootPageNode);
+        Page rootPage = bufferManager.fetchPage(rootPageId);
+        rootPageNode = new BPlusTreeLeafPageNode<>(key, value, rootPageId, Config.INVALID_PAGE_ID, MAXDEGREE);
         ((BPlusTreeLeafPageNode<K, V>) rootPageNode).insertAndSort(key, value);
         serializePageNode(rootPage, rootPageNode);
 //        this.bufferManager.unpinPage(rootPageId, true);
+    }
+
+    private void startNewTree() {
+        Page rootPage = bufferManager.newPage();
+        rootPageId = rootPage.getPageId();
     }
 
     /**

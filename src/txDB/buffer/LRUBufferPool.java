@@ -141,10 +141,12 @@ public class LRUBufferPool {
              * new page cannot be put.
              */
             DLinkedNode evictNode = new DLinkedNode();
-            // when currentSize < bufferSize, we do not need to do victim()
+            // when currentSize < bufferSize, we do not need to do victim() for efficiency issues
             if (this.currentSize >= this.bufferSize)
                 if ((evictNode = this.victim()) == null)
-                    throw new RuntimeException("BUFFER EXCEEDED ERROR");
+                    // we do not throw RuntimeException here to keep system going
+                    // throw new RuntimeException("BUFFER EXCEEDED ERROR");
+                    return false;
 
             DLinkedNode newNode = new DLinkedNode();
             newNode.key = key;
@@ -156,7 +158,10 @@ public class LRUBufferPool {
             this.currentSize++;
 
             if (this.currentSize > this.bufferSize) {
+//                System.out.println("currentSize > bufferSize");
+//                System.out.println(evictNode.value.getPageId() + ": " + evictNode.value.getIsDirty());
                 if (evictNode.value.getIsDirty()) {
+//                    System.out.println("page " + evictNode.key + " is flushed");
                     this.diskManager.writePage(evictNode.key, evictNode.value.getPageData());
                 }
                 this.removeNode(evictNode);

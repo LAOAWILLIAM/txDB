@@ -124,7 +124,6 @@ public class TablePage extends Page {
      */
     public Tuple getTuple(RecordID rid, Transaction txn, LockManager lockManager) {
         int tupleIndex = rid.getTupleIndex();
-        System.out.println(tupleIndex);
         if (tupleIndex > getTupleCount()) {
             if (Config.ENABLE_LOGGING) {
                 // abort this transaction
@@ -134,7 +133,6 @@ public class TablePage extends Page {
         }
 
         int tupleSize = getTupleSize(tupleIndex);
-        System.out.println(tupleSize);
         if (tupleIsDeleted(tupleSize)) {
             if (Config.ENABLE_LOGGING) {
                 // abort this transaction
@@ -150,7 +148,6 @@ public class TablePage extends Page {
         int tupleOffset = getTupleOffset(tupleIndex);
         byte[] tupleData = new byte[tupleSize];
         ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
-        System.out.println(tupleOffset + ", " + tupleSize);
         int i;
         for (i = 0; i < tupleSize; i++) {
             tupleData[i] = pageBuffer.get(tupleOffset + i);
@@ -316,8 +313,9 @@ public class TablePage extends Page {
     }
 
     private boolean tupleIsDeleted(int tupleSize) {
-        System.out.println("&: " + (tupleSize & DELETE_MASK));
-        return tupleSize == 0 || (tupleSize & DELETE_MASK) == 0;
+        // TODO
+//        return tupleSize == 0 || (tupleSize & DELETE_MASK) == 0;
+        return tupleSize == 0;
     }
 
     private int setTupleDeleted(int tupleSize) {

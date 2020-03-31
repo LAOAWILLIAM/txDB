@@ -74,11 +74,11 @@ public class MetaDataPageTest {
             ByteArrayInputStream bis = new ByteArrayInputStream(page0.getPageData());
             ObjectInputStream in = new ObjectInputStream(bis);
             metaDataPage = (MetaDataPage) in.readObject();
-            assertEquals(metaDataPage.getRelationMetaData(relationName).rootRelationPageId, 1);
-            assertEquals(metaDataPage.getRelationMetaData(relationName).relationName, "table0");
-            assertEquals(metaDataPage.getIndexMetaData(indexName).rootIndexPageId, 2);
-            assertEquals(metaDataPage.getIndexMetaData(indexName).indexName, "index0");
-            assertEquals(metaDataPage.getIndexMetaData(indexName).indexAttributes.get(0).getColumnName(), "col0");
+            assertEquals(metaDataPage.getRelationMetaData(relationName).getRootRelationPageId(), 1);
+            assertEquals(metaDataPage.getRelationMetaData(relationName).getRelationName(), "table0");
+            assertEquals(metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 2);
+            assertEquals(metaDataPage.getIndexMetaData(indexName).getIndexName(), "index0");
+            assertEquals(metaDataPage.getIndexMetaData(indexName).getIndexAttributes().get(0).getColumnName(), "col0");
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         } finally {

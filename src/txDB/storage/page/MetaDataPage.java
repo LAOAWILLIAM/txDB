@@ -56,28 +56,64 @@ public class MetaDataPage implements Serializable {
     }
 
     public class RelationMetaData implements Serializable {
-        public Scheme scheme;
-        public String relationName;
-        public int rootRelationPageId;
+        private Scheme scheme;
+        private String relationName;
+        private int rootRelationPageId;
 
         public RelationMetaData(Scheme scheme, String relationName, int rootRelationPageId) {
             this.scheme = scheme;
             this.relationName = relationName;
             this.rootRelationPageId = rootRelationPageId;
         }
+
+        public int getRootRelationPageId() {
+            return this.rootRelationPageId;
+        }
+
+        public void setRootRelationPageId(int rootRelationPageId) {
+            this.rootRelationPageId = rootRelationPageId;
+        }
+
+        public String getRelationName() {
+            return this.relationName;
+        }
+
+        public Scheme getScheme() {
+            return this.scheme;
+        }
     }
 
     public class IndexMetaData implements Serializable {
-        public String indexName;
-        public String relationName;
-        public ArrayList<Column> indexAttributes;
-        public int rootIndexPageId;
+        private String indexName;
+        private String relationName;
+        private ArrayList<Column> indexAttributes;
+        private int rootIndexPageId;
 
         public IndexMetaData(String indexName, String relationName, ArrayList<Column> indexAttributes, int rootIndexPageId) {
             this.indexName = indexName;
             this.relationName = relationName;
             this.indexAttributes = new ArrayList<>(indexAttributes);
             this.rootIndexPageId = rootIndexPageId;
+        }
+
+        public int getRootIndexPageId() {
+            return this.rootIndexPageId;
+        }
+
+        public void setRootIndexPageId(int rootIndexPageId) {
+            this.rootIndexPageId = rootIndexPageId;
+        }
+
+        public String getRelationName() {
+            return this.relationName;
+        }
+
+        public String getIndexName() {
+            return this.indexName;
+        }
+
+        public ArrayList<Column> getIndexAttributes() {
+            return this.indexAttributes;
         }
     }
 }

@@ -1,5 +1,6 @@
 package test.buffer;
 
+import txDB.Config;
 import txDB.buffer.BufferManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.page.Page;
@@ -8,6 +9,7 @@ import txDB.storage.page.TablePage;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import java.io.File;
+import java.nio.ByteBuffer;
 
 public class BufferManagerTest {
     @Test
@@ -25,8 +27,11 @@ public class BufferManagerTest {
         assertNotNull(page0);
         assertEquals(page0.getPageId(), 0);
 
-        page0.setPageData("hello".getBytes());
-        assertTrue("hello".equals(new String(page0.getPageData())));
+        byte[] hello = "hello".getBytes();
+        page0.setPageData(hello);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(Config.PAGE_SIZE);
+        byteBuffer.put(hello);
+        assertEquals(new String(byteBuffer.array()), new String(page0.getPageData()));
 
         int i;
         for (i = 1; i < bufferSize; i++) {
@@ -46,8 +51,7 @@ public class BufferManagerTest {
 
         page0 = bufferManager.fetchPage(0);
         assertNotNull(page0);
-        System.out.println(new String(page0.getPageData()));
-//        assertTrue("hello".equals(new String(page0.getPageData())));
+        assertEquals(new String(byteBuffer.array()), new String(page0.getPageData()));
 
         assertTrue(bufferManager.unpinPage(0, true));
         assertNotNull(bufferManager.newPage());

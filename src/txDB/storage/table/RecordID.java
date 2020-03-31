@@ -1,6 +1,8 @@
 package txDB.storage.table;
 
-public class RecordID {
+import java.io.Serializable;
+
+public class RecordID implements Serializable {
     private int pageId;
     private int tupleIndex;
 
