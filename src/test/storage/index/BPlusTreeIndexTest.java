@@ -69,7 +69,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void rootAsLeafNodeTest() {
+    public void rootAsLeafNodeTest() throws IOException, ClassNotFoundException {
         String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);
@@ -103,7 +103,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void rootAsLeafNodeFirstSplitTest() {
+    public void rootAsLeafNodeFirstSplitTest() throws IOException, ClassNotFoundException {
         String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);
@@ -128,7 +128,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void rootAsLeafNodeFirstSplitAndInsertTest() {
+    public void rootAsLeafNodeFirstSplitAndInsertTest() throws IOException, ClassNotFoundException {
         String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);
@@ -162,7 +162,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void internalNodeSplitTest() {
+    public void internalNodeSplitTest() throws IOException, ClassNotFoundException {
         String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);
@@ -232,7 +232,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void insertScaleTest() {
+    public void insertScaleTest() throws IOException, ClassNotFoundException {
         String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);
@@ -242,7 +242,7 @@ public class BPlusTreeIndexTest {
         DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 500);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100);
 
         int max = 100000, i;
         for(i = 0; i < max; i++) {
@@ -252,7 +252,32 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void traverseLeafNodesTest() {
+    public void insertPersistScaleTest() throws IOException, ClassNotFoundException {
+        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
+        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
+        File dbFile = new File(dbFilePath);
+        File logFile = new File(logFilePath);
+
+        int bufferSize = 100000;
+        DiskManager diskManager = new DiskManager(dbFilePath);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100);
+
+        int max = 100000, i;
+        for(i = 0; i < max; i++) {
+            bpti.insert(i, i);
+        }
+
+        bufferManager.flushAllPages();
+
+        for(i = 0; i < max; i++) {
+            assertEquals(bpti.find(i), new Integer(i));
+        }
+    }
+
+    @Test
+    public void traverseLeafNodesTest() throws IOException, ClassNotFoundException {
         String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);
@@ -316,7 +341,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void deleteWithRedistributeAndMergeTest() {
+    public void deleteWithRedistributeAndMergeTest() throws IOException, ClassNotFoundException {
         String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);
@@ -357,7 +382,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void deleteScaleTest() {
+    public void deleteScaleTest() throws IOException, ClassNotFoundException {
         String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);

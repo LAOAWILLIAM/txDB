@@ -1,18 +1,29 @@
 package txDB.concurrency;
 
-public class TransactionManager implements Runnable {
+import txDB.recovery.LogManager;
+
+public class TransactionManager {
     // TODO
+    private LockManager lockManager;
+    private LogManager logManager;
 
-    private Thread thread;
-
-    @Override
-    public void run() {
-
+    public TransactionManager(LockManager lockManager, LogManager logManager) {
+        this.lockManager = lockManager;
+        this.logManager = logManager;
     }
 
-    public void start() {
-        thread = new Thread(this);
-        thread.start();
+    public Transaction begin() {
+        // TODO
+        return null;
     }
+
+    public void commit(Transaction txn) {
+        // TODO
+    }
+
+    public void abort(Transaction txn) {
+        // TODO
+    }
+
 
 }

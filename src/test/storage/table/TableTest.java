@@ -315,13 +315,13 @@ public class TableTest {
     }
 
     @Test
-    public void getTupleWithIndexTest() {
+    public void getTupleWithIndexTest() throws IOException, ClassNotFoundException {
         String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);
         File logFile = new File(logFilePath);
 
-        int bufferSize = 10;
+        int bufferSize = 10000;
         DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -364,20 +364,16 @@ public class TableTest {
                 metaDataPage.new IndexMetaData(indexName, relationName, indexAttributes, bpti.getRootPageId());
         metaDataPage.addIndexMetaData(indexName, indexMetaData);
 
-        try {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ObjectOutput out = new ObjectOutputStream(bos);
-            out.writeObject(metaDataPage);
-            page0.setPageData(bos.toByteArray());
-            bufferManager.unpinPage(page0.getPageId(), true);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutput out = new ObjectOutputStream(bos);
+        out.writeObject(metaDataPage);
+        page0.setPageData(bos.toByteArray());
+        bufferManager.unpinPage(page0.getPageId(), true);
 
         ArrayList<Object> values = new ArrayList<>();
         Tuple tuple, res;
         int i;
-        for (i = 0; i < 7000; i++) {
+        for (i = 0; i < 200000; i++) {
             values.clear();
             int column0 = i * 3 + 1;
             values.add(column0);
@@ -410,6 +406,7 @@ public class TableTest {
             bpti = new BPlusTreeIndex<>(bufferManager, metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 100);
             assertEquals(table.getTuple(bpti.find(3001), null).getValue(scheme, 1), new Integer(3002));
             assertEquals(table.getTuple(bpti.find(18001), null).getValue(scheme, 1), new Integer(18002));
+            assertEquals(table.getTuple(bpti.find(450001), null).getValue(scheme, 1), new Integer(450002));
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         } finally {
