@@ -90,6 +90,57 @@ public class Table {
         return true;
     }
 
+    public int insertTuple(int pageId, Tuple tuple, RecordID recordID, Transaction txn) {
+        if (pageId == -1) return -1;
+
+        if (tuple.getTupleSize() + 32 > Config.PAGE_SIZE) {
+//            System.out.println("bug 1");
+            // abort this transaction
+            return -1;
+        }
+
+        Page curPage = bufferManager.fetchPage(pageId);
+        if (curPage == null) {
+//            System.out.println("bug 2");
+            // abort this transaction
+            // TODO
+            return -1;
+        }
+
+        TablePage curTablePage = new TablePage(curPage);
+        bufferManager.replacePage(curTablePage);
+
+        TablePage newTablePage;
+        while (!curTablePage.insertTuple(tuple, recordID, txn, lockManager, logManager)) {
+            int nextPageId = curTablePage.getNextPageId();
+            if (nextPageId != Config.INVALID_PAGE_ID) {
+                bufferManager.unpinPage(curTablePage.getPageId(), false);
+                Page newPage = bufferManager.fetchPage(nextPageId);
+                newTablePage = new TablePage(newPage);
+                bufferManager.replacePage(newTablePage);
+            } else {
+                Page newPage = bufferManager.newPage();
+                if (newPage == null) {
+                    bufferManager.unpinPage(curTablePage.getPageId(), false);
+                    // abort this transaction
+                    // TODO
+                    return -1;
+                }
+//                System.out.println("table new page " + newPage.getPageId());
+                newTablePage = new TablePage(newPage);
+                bufferManager.replacePage(newTablePage);
+                curTablePage.setNextPageId(newTablePage.getPageId());
+                newTablePage.initialize(newTablePage.getPageId(), Config.PAGE_SIZE, curTablePage.getPageId(), logManager, txn);
+                bufferManager.unpinPage(curTablePage.getPageId(), true);
+            }
+            curTablePage = newTablePage;
+        }
+//        System.out.println("curTablePage: " + curTablePage.getTablePageId());
+        bufferManager.unpinPage(curTablePage.getPageId(), true);
+        // transaction operation here TODO
+        return curTablePage.getPageId();
+    }
+
     public Tuple getTuple(RecordID recordID, Transaction txn) {
         Page page = bufferManager.fetchPage(recordID.getPageId());
         if (page == null) {

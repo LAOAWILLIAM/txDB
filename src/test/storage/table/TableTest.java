@@ -321,7 +321,7 @@ public class TableTest {
         File dbFile = new File(dbFilePath);
         File logFile = new File(logFilePath);
 
-        int bufferSize = 10000;
+        int bufferSize = 100000;
         DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -373,14 +373,33 @@ public class TableTest {
         ArrayList<Object> values = new ArrayList<>();
         Tuple tuple, res;
         int i;
-        for (i = 0; i < 200000; i++) {
+//        for (i = 0; i < 1000000; i++) {
+//            values.clear();
+//            int column0 = i * 3 + 1;
+//            values.add(column0);
+//            values.add(i * 3 + 2);
+//            values.add(i * 3 + 3);
+//            tuple = new Tuple(values, scheme);
+//            assertTrue(table.insertTuple(tuple, recordID, null));
+//            bpti.insert(column0, recordID);
+////            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
+//            res = table.getTuple(bpti.find(column0), null);
+//            assertNotNull(res);
+//            assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
+//            assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
+//            assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
+//        }
+
+        int curPageId = table.getFirstPageId();
+        for (i = 0; i < 1000000; i++) {
             values.clear();
             int column0 = i * 3 + 1;
             values.add(column0);
             values.add(i * 3 + 2);
             values.add(i * 3 + 3);
             tuple = new Tuple(values, scheme);
-            assertTrue(table.insertTuple(tuple, recordID, null));
+            curPageId = table.insertTuple(curPageId, tuple, recordID, null);
+            assertNotEquals(-1, curPageId);
             bpti.insert(column0, recordID);
 //            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
             res = table.getTuple(bpti.find(column0), null);
@@ -412,8 +431,8 @@ public class TableTest {
         } finally {
             diskManager.close();
 
-            BufferManagerTest.deleteFile(dbFile);
-            BufferManagerTest.deleteFile(logFile);
+//            BufferManagerTest.deleteFile(dbFile);
+//            BufferManagerTest.deleteFile(logFile);
         }
     }
 
