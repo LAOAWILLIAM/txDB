@@ -1,20 +1,32 @@
 package txDB.concurrency;
 
+import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import txDB.Config;
 import txDB.recovery.LogManager;
 
 public class TransactionManager {
     // TODO
     private LockManager lockManager;
     private LogManager logManager;
+    private HashMap<Integer, Transaction> txnMap;
+    private AtomicInteger nextTxnId;
 
     public TransactionManager(LockManager lockManager, LogManager logManager) {
         this.lockManager = lockManager;
         this.logManager = logManager;
+        this.txnMap = new HashMap<>();
+        this.nextTxnId = new AtomicInteger(0);
     }
 
     public Transaction begin() {
-        // TODO
-        return null;
+        Transaction txn = new Transaction(this.nextTxnId.getAndIncrement());
+        if (Config.ENABLE_LOGGING) {
+            // TODO
+        }
+        txnMap.put(txn.getTxnId(), txn);
+        return txn;
     }
 
     public void commit(Transaction txn) {

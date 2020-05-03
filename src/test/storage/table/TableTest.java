@@ -373,24 +373,6 @@ public class TableTest {
         ArrayList<Object> values = new ArrayList<>();
         Tuple tuple, res;
         int i;
-//        for (i = 0; i < 1000000; i++) {
-//            values.clear();
-//            int column0 = i * 3 + 1;
-//            values.add(column0);
-//            values.add(i * 3 + 2);
-//            values.add(i * 3 + 3);
-//            tuple = new Tuple(values, scheme);
-//            assertTrue(table.insertTuple(tuple, recordID, null));
-//            bpti.insert(column0, recordID);
-////            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
-//            res = table.getTuple(bpti.find(column0), null);
-//            assertNotNull(res);
-//            assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
-//            assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
-//            assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
-//        }
-
-        int curPageId = table.getFirstPageId();
         for (i = 0; i < 1000000; i++) {
             values.clear();
             int column0 = i * 3 + 1;
@@ -398,15 +380,14 @@ public class TableTest {
             values.add(i * 3 + 2);
             values.add(i * 3 + 3);
             tuple = new Tuple(values, scheme);
-            curPageId = table.insertTuple(curPageId, tuple, recordID, null);
-            assertNotEquals(-1, curPageId);
+            assertTrue(table.insertTuple(tuple, recordID, null));
             bpti.insert(column0, recordID);
 //            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
-            res = table.getTuple(bpti.find(column0), null);
-            assertNotNull(res);
-            assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
-            assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
-            assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
+//            res = table.getTuple(bpti.find(column0), null);
+//            assertNotNull(res);
+//            assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
+//            assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
+//            assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
         }
 
         bufferManager.flushAllPages();
