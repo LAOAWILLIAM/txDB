@@ -37,5 +37,11 @@ public class TransactionManager {
         // TODO
     }
 
+    public Transaction getTransaction(int txnId) {
+        if (txnMap.containsKey(txnId)) {
+            return txnMap.get(txnId);
+        }
 
+        return null;
+    }
 }

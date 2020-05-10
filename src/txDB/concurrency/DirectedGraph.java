@@ -1,14 +1,15 @@
 package txDB.concurrency;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class DirectedGraph {
-    private ArrayList<ArrayList<Integer>> adj;
+    private HashMap<Integer, ArrayList<Integer>> adj;
     private int edgeNum;
     private int nodeNum;
 
     public DirectedGraph() {
-        this.adj = new ArrayList<>();
+        this.adj = new HashMap<>();
         this.edgeNum = 0;
         this.nodeNum = 0;
     }
@@ -21,24 +22,31 @@ public class DirectedGraph {
         return nodeNum;
     }
 
-    public ArrayList<ArrayList<Integer>> getAdj() {
+    public HashMap<Integer, ArrayList<Integer>> getAdj() {
         return adj;
     }
 
     public void addNode(int v) {
-        if (adj.size() <= v) {
-            adj.add(v, new ArrayList<>());
+        if (!adj.containsKey(v)) {
+            adj.put(v, new ArrayList<>());
             nodeNum++;
         }
     }
 
-    public void addEdge(int v, Integer w) {
+    public void removeNode(int v) {
+        if (adj.containsKey(v)) {
+            adj.remove(v);
+            nodeNum--;
+        }
+    }
+
+    public void addEdge(int v, int w) {
         adj.get(v).add(w);
         edgeNum++;
     }
 
-    public void removeEdge(int v, Integer w) {
-        adj.get(v).remove(w);
+    public void removeEdge(int v, int w) {
+        adj.get(v).remove((Integer) w);
         edgeNum--;
     }
 
