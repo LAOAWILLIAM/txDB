@@ -98,22 +98,71 @@ public class LockManagerTest {
 
     @Test
     public void deadlockDetectionTest() throws Exception {
-        class SharedOperation implements Callable<Boolean> {
+//        class SharedOperation implements Callable<Boolean> {
+//            private Transaction txn;
+//            private RecordID recordID;
+//            public SharedOperation(Transaction txn, RecordID recordID) {
+//                this.txn = txn;
+//                this.recordID = recordID;
+//            }
+//
+//            @Override
+//            public Boolean call() {
+//                boolean res = false;
+//                try {
+//                    res = lockManager.acquireSharedLock(txn, recordID);
+////                    TimeUnit.SECONDS.sleep(1);
+////                    lockManager.unlock(txn, recordID);
+////                    Thread.yield();
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//
+//                return res;
+//            }
+//        }
+//
+//        class ExclusiveOperation implements Callable<Boolean> {
+//            private Transaction txn;
+//            private RecordID recordID;
+//            public ExclusiveOperation(Transaction txn, RecordID recordID) {
+//                this.txn = txn;
+//                this.recordID = recordID;
+//            }
+//
+//            @Override
+//            public Boolean call() {
+//                boolean res = false;
+//                try {
+//                    res = lockManager.acquireExclusiveLock(txn, recordID);
+////                    TimeUnit.SECONDS.sleep(1);
+////                    lockManager.unlock(txn, recordID);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//
+//                return res;
+//            }
+//        }
+
+        class T0Operation implements Callable<Boolean> {
             private Transaction txn;
             private RecordID recordID;
-            public SharedOperation(Transaction txn, RecordID recordID) {
+            private RecordID recordID1;
+            public T0Operation(Transaction txn, RecordID recordID, RecordID recordID1) {
                 this.txn = txn;
                 this.recordID = recordID;
+                this.recordID1 = recordID1;
             }
 
             @Override
             public Boolean call() {
                 boolean res = false;
                 try {
-                    res = lockManager.acquireSharedLock(txn, recordID);
-//                    TimeUnit.SECONDS.sleep(1);
-//                    lockManager.unlock(txn, recordID);
-//                    Thread.yield();
+                    lockManager.acquireSharedLock(txn, recordID);
+                    // simulate internal process for 100 milliseconds
+                    TimeUnit.MILLISECONDS.sleep(100);
+                    lockManager.acquireSharedLock(txn, recordID1);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -122,21 +171,50 @@ public class LockManagerTest {
             }
         }
 
-        class ExclusiveOperation implements Callable<Boolean> {
+        class T1Operation implements Callable<Boolean> {
             private Transaction txn;
             private RecordID recordID;
-            public ExclusiveOperation(Transaction txn, RecordID recordID) {
+            private RecordID recordID1;
+            public T1Operation(Transaction txn, RecordID recordID, RecordID recordID1) {
                 this.txn = txn;
                 this.recordID = recordID;
+                this.recordID1 = recordID1;
             }
 
             @Override
             public Boolean call() {
                 boolean res = false;
                 try {
-                    res = lockManager.acquireExclusiveLock(txn, recordID);
-//                    TimeUnit.SECONDS.sleep(1);
-//                    lockManager.unlock(txn, recordID);
+                    lockManager.acquireExclusiveLock(txn, recordID);
+                    // simulate internal process for 200 milliseconds
+                    TimeUnit.MILLISECONDS.sleep(200);
+                    lockManager.acquireExclusiveLock(txn, recordID1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                return res;
+            }
+        }
+
+        class T2Operation implements Callable<Boolean> {
+            private Transaction txn;
+            private RecordID recordID;
+            private RecordID recordID1;
+            public T2Operation(Transaction txn, RecordID recordID, RecordID recordID1) {
+                this.txn = txn;
+                this.recordID = recordID;
+                this.recordID1 = recordID1;
+            }
+
+            @Override
+            public Boolean call() {
+                boolean res = false;
+                try {
+                    lockManager.acquireSharedLock(txn, recordID);
+                    // simulate internal process for 300 milliseconds
+                    TimeUnit.MILLISECONDS.sleep(300);
+                    lockManager.acquireExclusiveLock(txn, recordID1);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -154,26 +232,32 @@ public class LockManagerTest {
         Transaction txn2 = transactionManager.begin();
 
         ExecutorService executorService = Executors.newCachedThreadPool();
-        TimeUnit.SECONDS.sleep(2);
-        executorService.submit(new SharedOperation(txn0, recordID0));
-        TimeUnit.MILLISECONDS.sleep(100);
-        executorService.submit(new ExclusiveOperation(txn1, recordID1));
-        TimeUnit.MILLISECONDS.sleep(100);
-        executorService.submit(new SharedOperation(txn2, recordID2));
-        TimeUnit.MILLISECONDS.sleep(100);
-        executorService.submit(new SharedOperation(txn0, recordID1));
-        TimeUnit.MILLISECONDS.sleep(100);
-        executorService.submit(new ExclusiveOperation(txn1, recordID2));
-        TimeUnit.MILLISECONDS.sleep(100);
-        executorService.submit(new ExclusiveOperation(txn2, recordID0));
+//        TimeUnit.SECONDS.sleep(2);
+//        executorService.submit(new SharedOperation(txn0, recordID0));
+////        TimeUnit.MILLISECONDS.sleep(100);
+//        executorService.submit(new ExclusiveOperation(txn1, recordID1));
+////        TimeUnit.MILLISECONDS.sleep(100);
+//        executorService.submit(new SharedOperation(txn2, recordID2));
+////        TimeUnit.MILLISECONDS.sleep(100);
+//        executorService.submit(new SharedOperation(txn0, recordID1));
+////        TimeUnit.MILLISECONDS.sleep(100);
+//        executorService.submit(new ExclusiveOperation(txn1, recordID2));
+////        TimeUnit.MILLISECONDS.sleep(100);
+//        executorService.submit(new ExclusiveOperation(txn2, recordID0));
+        executorService.submit(new T0Operation(txn0, recordID0, recordID1));
+        executorService.submit(new T1Operation(txn1, recordID1, recordID2));
+        executorService.submit(new T2Operation(txn2, recordID2, recordID0));
 
-        TimeUnit.SECONDS.sleep(2);
+        executorService.shutdown();
+
+        // give detector enough time to finish detecting
+        TimeUnit.SECONDS.sleep(1);
+        lockManager.close();
+
         int[] expectArray = {2, 1, 0, 2};
         Stack<Integer> actualStack = lockManager.getCycles().get(0);
-        for (int i = 0; i < actualStack.size(); i++) {
-            assertEquals(actualStack.get(i), new Integer(expectArray[i]));
+        for (int j = 0; j < actualStack.size(); j++) {
+            assertEquals(actualStack.get(j), new Integer(expectArray[j]));
         }
-        executorService.shutdown();
-        lockManager.close();
     }
 }
