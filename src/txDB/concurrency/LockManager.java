@@ -42,9 +42,11 @@ public class LockManager {
             System.out.println("detection is on");
             while (whetherDetection.get() && !Thread.interrupted()) {
                 try {
-                    waitsForGraph = new WaitsForGraph(directedGraph);
-                    cycles = waitsForGraph.dfsFindCycle();
-                    TimeUnit.MILLISECONDS.sleep(1000);
+                    synchronized (LockManager.this) {
+                        waitsForGraph = new WaitsForGraph(directedGraph);
+                        cycles = waitsForGraph.dfsFindCycle();
+                    }
+                    TimeUnit.MILLISECONDS.sleep(2000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -99,28 +101,41 @@ public class LockManager {
         public void findAndRemoveRequestQueue(Transaction txn) {
             for (LockRequest lockRequest : requestQueue) {
                 if (lockRequest.getTxnId() == txn.getTxnId()) {
-//                    if (lockRequest.getLockType() == lockType.SHARED) {
-//                        setShared(false);
-//                    } else {
-//                        setShared(true);
-//                    }
-                    setShared(true);
+                    if (lockRequest.getLockType() == lockType.SHARED) {
+                        if (findGrantedTransaction(txn) != -1) {
+                            setShared(true);
+                        } else {
+                            getOldestRequestLockType(txn);
+                        }
+                    } else {
+                        getOldestRequestLockType(txn);
+                    }
                     removeRequestQueue(lockRequest);
                     break;
                 }
             }
         }
 
-        public boolean findGrantedTransaction(Transaction txn) {
+        private void getOldestRequestLockType(Transaction txn) {
             for (LockRequest lockRequest : requestQueue) {
                 if (lockRequest.getTxnId() != txn.getTxnId()) {
-                    if (lockRequest.isGranted()) {
-                        addTxnEdge(txn.getTxnId(), lockRequest.getTxnId());
-                        return true;
+                    if (!lockRequest.isGranted()) {
+                        setShared(lockRequest.getLockType() == lockType.SHARED);
+                        break;
                     }
                 }
             }
-            return false;
+        }
+
+        public int findGrantedTransaction(Transaction txn) {
+            for (LockRequest lockRequest : requestQueue) {
+                if (lockRequest.getTxnId() != txn.getTxnId()) {
+                    if (lockRequest.isGranted()) {
+                        return lockRequest.getTxnId();
+                    }
+                }
+            }
+            return -1;
         }
     }
 
@@ -157,6 +172,7 @@ public class LockManager {
         synchronized (this) {
             LockRequest lockRequest = new LockRequest(txn.getTxnId(), lockType.SHARED);
             addTxnNode(txn.getTxnId());
+//            System.out.println("add node: " + txn.getTxnId());
 
             if (!lockTable.containsKey(recordID)) {
                 lockRequest.setGranted(true);
@@ -172,11 +188,12 @@ public class LockManager {
             LockRequestQueue lockRequestQueue = lockTable.get(recordID);
             lockRequestQueue.pushRequestQueue(lockRequest);
 
-            boolean anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
-            System.out.println("any granted txn: " + anyGrantedTransaction);
+            int anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
+//            System.out.println("any granted txn when txn " + txn.getTxnId() + " is acquiring: " + anyGrantedTransaction + ", isShared: " + lockRequestQueue.isShared());
 
             while (!lockRequestQueue.isShared()) {
-                System.out.println("txn " + txn.getTxnId() + " is waiting");
+                addTxnEdge(txn.getTxnId(), anyGrantedTransaction);
+//                System.out.println("txn " + txn.getTxnId() + " is waiting");
                 wait();
             }
 
@@ -193,6 +210,7 @@ public class LockManager {
         synchronized (this) {
             LockRequest lockRequest = new LockRequest(txn.getTxnId(), lockType.EXCLUSIVE);
             addTxnNode(txn.getTxnId());
+//            System.out.println("add node: " + txn.getTxnId());
 
             if (!lockTable.containsKey(recordID)) {
                 lockRequest.setGranted(true);
@@ -207,12 +225,14 @@ public class LockManager {
             LockRequestQueue lockRequestQueue = lockTable.get(recordID);
             lockRequestQueue.pushRequestQueue(lockRequest);
 
-            boolean anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
-            System.out.println("any granted txn: " + anyGrantedTransaction);
+            int anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
+//            System.out.println("any granted txn: " + txn.getTxnId() + " is acquiring: " + anyGrantedTransaction + ", isShared: " + lockRequestQueue.isShared());
 
-            while (lockRequestQueue.isShared() && anyGrantedTransaction) {
-                System.out.println("txn " + txn.getTxnId() + " is waiting");
+            while (lockRequestQueue.isShared() || anyGrantedTransaction != -1) {
+                addTxnEdge(txn.getTxnId(), anyGrantedTransaction);
+//                System.out.println("txn " + txn.getTxnId() + " is waiting");
                 wait();
+                anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
             }
 
             System.out.println("txn " + txn.getTxnId() + " get exclusive lock on tuple " + recordID.getTupleIndex());
@@ -222,12 +242,14 @@ public class LockManager {
         }
     }
 
-    public boolean unlock(Transaction txn, RecordID recordID) throws InterruptedException {
+    public boolean unlock(Transaction txn, RecordID recordID) {
         // TODO
         synchronized (this) {
             System.out.println("txn " + txn.getTxnId() + " release lock");
             LockRequestQueue lockRequestQueue = lockTable.get(recordID);
             lockRequestQueue.findAndRemoveRequestQueue(txn);
+            removeTxnNode(txn.getTxnId());
+//            System.out.println("remove node: " + txn.getTxnId());
             notifyAll();
 
             return true;

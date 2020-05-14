@@ -7,11 +7,13 @@ public class DirectedGraph {
     private HashMap<Integer, ArrayList<Integer>> adj;
     private int edgeNum;
     private int nodeNum;
+    private int totalNodeNum;
 
     public DirectedGraph() {
         this.adj = new HashMap<>();
         this.edgeNum = 0;
         this.nodeNum = 0;
+        this.totalNodeNum = 0;
     }
 
     public int getEdgeNum() {
@@ -22,6 +24,10 @@ public class DirectedGraph {
         return nodeNum;
     }
 
+    public int getTotalNodeNum() {
+        return totalNodeNum;
+    }
+
     public HashMap<Integer, ArrayList<Integer>> getAdj() {
         return adj;
     }
@@ -29,7 +35,7 @@ public class DirectedGraph {
     public void addNode(int v) {
         if (!adj.containsKey(v)) {
             adj.put(v, new ArrayList<>());
-            nodeNum++;
+            totalNodeNum = ++nodeNum;
         }
     }
 
@@ -41,8 +47,10 @@ public class DirectedGraph {
     }
 
     public void addEdge(int v, int w) {
-        adj.get(v).add(w);
-        edgeNum++;
+        if (!adj.get(v).contains(w)) {
+            adj.get(v).add(w);
+            edgeNum++;
+        }
     }
 
     public void removeEdge(int v, int w) {
