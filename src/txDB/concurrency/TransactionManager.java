@@ -31,10 +31,12 @@ public class TransactionManager {
 
     public void commit(Transaction txn) {
         // TODO
+        txn.setTransactionState(Transaction.TransactionState.COMMITTED);
     }
 
     public void abort(Transaction txn) {
         // TODO
+        txn.setTransactionState(Transaction.TransactionState.ABORTED);
     }
 
     public Transaction getTransaction(int txnId) {

@@ -25,12 +25,13 @@ public class LockManager {
     public LockManager(twoPhaseLockType tplt, deadlockType dlt) {
         this.tplt = tplt;
         this.dlt = dlt;
-        this.directedGraph = new DirectedGraph();
-        this.cycles = new ArrayList<>();
         this.lockTable = new HashMap<>();
+        whetherDetection = new AtomicBoolean(false);
 
         if (dlt.equals(deadlockType.DETECTION)) {
-            whetherDetection = new AtomicBoolean(true);
+            directedGraph = new DirectedGraph();
+            cycles = new ArrayList<>();
+            whetherDetection.set(true);
             detectionExec = Executors.newSingleThreadExecutor();
             detectionExec.execute(new cycleDetection());
         }
@@ -167,12 +168,21 @@ public class LockManager {
         }
     }
 
+    /**
+     *
+     * @param txn
+     * @param recordID
+     * @return
+     * @throws InterruptedException
+     */
     public boolean acquireSharedLock(Transaction txn, RecordID recordID) throws InterruptedException {
         // TODO
         synchronized (this) {
             LockRequest lockRequest = new LockRequest(txn.getTxnId(), lockType.SHARED);
-            addTxnNode(txn.getTxnId());
-//            System.out.println("add node: " + txn.getTxnId());
+            if (whetherDetection.get()) {
+                addTxnNode(txn.getTxnId());
+//                System.out.println("add node: " + txn.getTxnId());
+            }
 
             if (!lockTable.containsKey(recordID)) {
                 lockRequest.setGranted(true);
@@ -191,10 +201,27 @@ public class LockManager {
             int anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
 //            System.out.println("any granted txn when txn " + txn.getTxnId() + " is acquiring: " + anyGrantedTransaction + ", isShared: " + lockRequestQueue.isShared());
 
-            while (!lockRequestQueue.isShared()) {
-                addTxnEdge(txn.getTxnId(), anyGrantedTransaction);
-//                System.out.println("txn " + txn.getTxnId() + " is waiting");
-                wait();
+            // use different deadlock handling algorithm based on whetherDetection
+            if (whetherDetection.get()) {
+                while (!lockRequestQueue.isShared()) {
+                    addTxnEdge(txn.getTxnId(), anyGrantedTransaction);
+//                    System.out.println("txn " + txn.getTxnId() + " is waiting");
+                    wait();
+                }
+            } else {
+                // deadlock prevention using wait-die scheme
+                if (!lockRequestQueue.isShared()) {
+                    if (txn.getTxnId() > anyGrantedTransaction) {
+                        System.out.println("txn " + txn.getTxnId() + " aborts");
+                        txn.setTransactionState(Transaction.TransactionState.ABORTED);
+                        return false;
+                    } else if (txn.getTxnId() < anyGrantedTransaction) {
+                        while (!lockRequestQueue.isShared()) {
+//                            System.out.println("txn " + txn.getTxnId() + " is waiting");
+                            wait();
+                        }
+                    }
+                }
             }
 
             System.out.println("txn " + txn.getTxnId() + " get shared lock on tuple " + recordID.getTupleIndex());
@@ -205,12 +232,21 @@ public class LockManager {
         }
     }
 
+    /**
+     *
+     * @param txn
+     * @param recordID
+     * @return
+     * @throws InterruptedException
+     */
     public boolean acquireExclusiveLock(Transaction txn, RecordID recordID) throws InterruptedException {
         // TODO
         synchronized (this) {
             LockRequest lockRequest = new LockRequest(txn.getTxnId(), lockType.EXCLUSIVE);
-            addTxnNode(txn.getTxnId());
-//            System.out.println("add node: " + txn.getTxnId());
+            if (whetherDetection.get()) {
+                addTxnNode(txn.getTxnId());
+//                System.out.println("add node: " + txn.getTxnId());
+            }
 
             if (!lockTable.containsKey(recordID)) {
                 lockRequest.setGranted(true);
@@ -228,11 +264,34 @@ public class LockManager {
             int anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
 //            System.out.println("any granted txn: " + txn.getTxnId() + " is acquiring: " + anyGrantedTransaction + ", isShared: " + lockRequestQueue.isShared());
 
-            while (lockRequestQueue.isShared() || anyGrantedTransaction != -1) {
-                addTxnEdge(txn.getTxnId(), anyGrantedTransaction);
-//                System.out.println("txn " + txn.getTxnId() + " is waiting");
-                wait();
-                anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
+            // use different deadlock handling algorithm based on whetherDetection
+            if (whetherDetection.get()) {
+                while (lockRequestQueue.isShared() || anyGrantedTransaction != -1) {
+                    addTxnEdge(txn.getTxnId(), anyGrantedTransaction);
+//                    System.out.println("txn " + txn.getTxnId() + " is waiting");
+                    wait();
+                    anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
+                }
+            } else {
+                // deadlock prevention using wait-die scheme
+                if (lockRequestQueue.isShared() || anyGrantedTransaction != -1) {
+                    if (txn.getTxnId() > anyGrantedTransaction) {
+                        System.out.println("txn " + txn.getTxnId() + " aborts");
+                        txn.setTransactionState(Transaction.TransactionState.ABORTED);
+                        return false;
+                    } else if (txn.getTxnId() < anyGrantedTransaction) {
+                        while (lockRequestQueue.isShared() || anyGrantedTransaction != -1) {
+//                            System.out.println("txn " + txn.getTxnId() + " is waiting");
+                            wait();
+                            anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
+                            if (txn.getTxnId() > anyGrantedTransaction) {
+                                System.out.println("txn " + txn.getTxnId() + " aborts");
+                                txn.setTransactionState(Transaction.TransactionState.ABORTED);
+                                return false;
+                            }
+                        }
+                    }
+                }
             }
 
             System.out.println("txn " + txn.getTxnId() + " get exclusive lock on tuple " + recordID.getTupleIndex());
@@ -242,6 +301,12 @@ public class LockManager {
         }
     }
 
+    /**
+     *
+     * @param txn
+     * @param recordID
+     * @return
+     */
     public boolean unlock(Transaction txn, RecordID recordID) {
         // TODO
         synchronized (this) {

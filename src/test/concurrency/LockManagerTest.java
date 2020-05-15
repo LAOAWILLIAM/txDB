@@ -19,13 +19,15 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.*;
 
 public class LockManagerTest {
-    LockManager lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
+    LockManager lockManager;
     TransactionManager transactionManager = new TransactionManager(lockManager, null);
     Random rand = new Random();
     ExecutorService executorService = Executors.newCachedThreadPool();
 
     @Test
     public void sharedAndExclusiveLockTest() throws Exception {
+        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
+
         class SharedOperation implements Callable<Boolean> {
             private Transaction txn;
             private RecordID recordID;
@@ -107,6 +109,8 @@ public class LockManagerTest {
 
     @Test
     public void largeSharedAndExclusiveLockSlowTransactionsTest() throws Exception {
+        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
+
         class SharedOperation implements Callable<Boolean> {
             private Transaction txn;
             private RecordID recordID;
@@ -169,6 +173,8 @@ public class LockManagerTest {
 
     @Test
     public void largeSharedAndExclusiveLockFastTransactionsTest() throws Exception {
+        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
+
         class SharedOperation implements Callable<Boolean> {
             private Transaction txn;
             private RecordID recordID;
@@ -219,7 +225,7 @@ public class LockManagerTest {
 
         for (int i = 0; i < 1000; i++) {
             Transaction txn = transactionManager.begin();
-            if (Math.random() < 0.8) executorService.submit(new ExclusiveOperation(txn, recordID0));
+            if (Math.random() < 0.5) executorService.submit(new ExclusiveOperation(txn, recordID0));
             else executorService.submit(new SharedOperation(txn, recordID0));
         }
 
@@ -231,6 +237,7 @@ public class LockManagerTest {
 
     @Test
     public void deadlockDetectionTest() throws Exception {
+        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
 
         class T0Operation implements Callable<Boolean> {
             private Transaction txn;
@@ -336,6 +343,7 @@ public class LockManagerTest {
 
     @Test
     public void largeDeadlockDetectionTest() throws Exception {
+        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
 
         class T0Operation implements Callable<Boolean> {
             private Transaction txn;
@@ -436,5 +444,106 @@ public class LockManagerTest {
         for (int j = 0; j < actualStack.size(); j++) {
             assertEquals(actualStack.get(j), new Integer(expectArray[j]));
         }
+    }
+
+    @Test
+    public void deadlockPreventionTest() throws InterruptedException {
+        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.PREVENTION);
+
+        class T0Operation implements Callable<Boolean> {
+            private Transaction txn;
+            private RecordID recordID;
+            private RecordID recordID1;
+            public T0Operation(Transaction txn, RecordID recordID, RecordID recordID1) {
+                this.txn = txn;
+                this.recordID = recordID;
+                this.recordID1 = recordID1;
+            }
+
+            @Override
+            public Boolean call() {
+                boolean res = false;
+                try {
+                    lockManager.acquireSharedLock(txn, recordID);
+                    // simulate internal process for 100 milliseconds
+                    TimeUnit.MILLISECONDS.sleep(100);
+                    lockManager.acquireSharedLock(txn, recordID1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                return res;
+            }
+        }
+
+        class T1Operation implements Callable<Boolean> {
+            private Transaction txn;
+            private RecordID recordID;
+            private RecordID recordID1;
+            public T1Operation(Transaction txn, RecordID recordID, RecordID recordID1) {
+                this.txn = txn;
+                this.recordID = recordID;
+                this.recordID1 = recordID1;
+            }
+
+            @Override
+            public Boolean call() {
+                boolean res = false;
+                try {
+                    lockManager.acquireExclusiveLock(txn, recordID);
+                    // simulate internal process for 200 milliseconds
+                    TimeUnit.MILLISECONDS.sleep(200);
+                    lockManager.acquireExclusiveLock(txn, recordID1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                return res;
+            }
+        }
+
+        class T2Operation implements Callable<Boolean> {
+            private Transaction txn;
+            private RecordID recordID;
+            private RecordID recordID1;
+            public T2Operation(Transaction txn, RecordID recordID, RecordID recordID1) {
+                this.txn = txn;
+                this.recordID = recordID;
+                this.recordID1 = recordID1;
+            }
+
+            @Override
+            public Boolean call() {
+                boolean res = false;
+                try {
+                    lockManager.acquireSharedLock(txn, recordID);
+                    // simulate internal process for 300 milliseconds
+                    TimeUnit.MILLISECONDS.sleep(300);
+                    lockManager.acquireExclusiveLock(txn, recordID1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                return res;
+            }
+        }
+
+        RecordID recordID0 = new RecordID(0, 0);
+        RecordID recordID1 = new RecordID(0, 1);
+        RecordID recordID2 = new RecordID(0, 2);
+
+        Transaction txn0 = transactionManager.begin();
+        Transaction txn1 = transactionManager.begin();
+        Transaction txn2 = transactionManager.begin();
+
+        executorService.submit(new T0Operation(txn0, recordID0, recordID1));
+        executorService.submit(new T1Operation(txn1, recordID1, recordID2));
+        executorService.submit(new T2Operation(txn2, recordID2, recordID0));
+
+        // give detector enough time to finish detecting
+        TimeUnit.SECONDS.sleep(2);
+        executorService.shutdown();
+
+        assertSame(txn2.getTransactionState(), Transaction.TransactionState.ABORTED);
     }
 }
