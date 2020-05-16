@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LockManager {
-    // TODO
+    // TODO: deadlock discovery with deadlock detection, and lock granularity support (now only tuple supported)
     public enum twoPhaseLockType {REGULAR, STRICT}
     public enum deadlockType {PREVENTION, DETECTION}
     public enum lockType {SHARED, EXCLUSIVE}
@@ -321,27 +321,27 @@ public class LockManager {
         }
     }
 
-    public void addTxnNode(int txn) {
+    private void addTxnNode(int txn) {
         directedGraph.addNode(txn);
     }
 
-    public void removeTxnNode(int txn) {
+    private void removeTxnNode(int txn) {
         directedGraph.removeNode(txn);
     }
 
-    public void addTxnEdge(int txn1, int txn2) {
+    private void addTxnEdge(int txn1, int txn2) {
         directedGraph.addEdge(txn1, txn2);
     }
 
-    public void removeTxnEdge(int txn1, int txn2) {
+    private void removeTxnEdge(int txn1, int txn2) {
         directedGraph.removeEdge(txn1, txn2);
     }
 
-    public ArrayList<Stack<Integer>> findCycle() {
+    private ArrayList<Stack<Integer>> findCycle() {
         return cycles;
     }
 
     public void close() {
-        detectionExec.shutdown();
+        if (whetherDetection.get()) detectionExec.shutdown();
     }
 }
