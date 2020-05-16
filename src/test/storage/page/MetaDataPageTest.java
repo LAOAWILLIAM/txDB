@@ -17,15 +17,17 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 public class MetaDataPageTest {
+    String dbName = "test";
+    DiskManager diskManager = new DiskManager();
+
+    public MetaDataPageTest() throws IOException {
+        diskManager.createFile(dbName);
+        diskManager.useFile(dbName);
+    }
+
     @Test
     public void createTableAndIndexTest() {
-        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
-        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
-        File dbFile = new File(dbFilePath);
-        File logFile = new File(logFilePath);
-
         int bufferSize = 100;
-        DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         Page page0 = bufferManager.newPage();
@@ -84,8 +86,7 @@ public class MetaDataPageTest {
         } finally {
             diskManager.close();
 
-            BufferManagerTest.deleteFile(dbFile);
-            BufferManagerTest.deleteFile(logFile);
+            diskManager.dropFile(dbName);
         }
     }
 }

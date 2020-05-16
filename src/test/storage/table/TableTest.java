@@ -21,15 +21,17 @@ import java.util.ArrayList;
 
 public class TableTest {
     // TODO
+    String dbName = "test";
+    DiskManager diskManager = new DiskManager();
+
+    public TableTest() throws IOException {
+        diskManager.createFile(dbName);
+        diskManager.useFile(dbName);
+    }
+
     @Test
     public void singlePageInsertTupleTest() {
-        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
-        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
-        File dbFile = new File(dbFilePath);
-        File logFile = new File(logFilePath);
-
         int bufferSize = 100;
-        DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         Page page0 = bufferManager.newPage();
@@ -69,21 +71,13 @@ public class TableTest {
             e.printStackTrace();
         } finally {
             diskManager.close();
-
-            BufferManagerTest.deleteFile(dbFile);
-            BufferManagerTest.deleteFile(logFile);
+            diskManager.dropFile(dbName);
         }
     }
 
     @Test
     public void singlePageFillTupleTest() {
-        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
-        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
-        File dbFile = new File(dbFilePath);
-        File logFile = new File(logFilePath);
-
         int bufferSize = 100;
-        DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         Page page0 = bufferManager.newPage();
@@ -136,20 +130,13 @@ public class TableTest {
         } finally {
             diskManager.close();
 
-            BufferManagerTest.deleteFile(dbFile);
-            BufferManagerTest.deleteFile(logFile);
+            diskManager.dropFile(dbName);
         }
     }
 
     @Test
     public void tableInsertTupleTest() {
-        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
-        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
-        File dbFile = new File(dbFilePath);
-        File logFile = new File(logFilePath);
-
         int bufferSize = 3;
-        DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         try {
@@ -210,22 +197,13 @@ public class TableTest {
             e.printStackTrace();
         } finally {
             diskManager.close();
-//            bufferManager.flushAllPages();
-
-            BufferManagerTest.deleteFile(dbFile);
-            BufferManagerTest.deleteFile(logFile);
+            diskManager.dropFile(dbName);
         }
     }
 
     @Test
     public void combineMetaDataAndTableTest() {
-        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
-        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
-        File dbFile = new File(dbFilePath);
-        File logFile = new File(logFilePath);
-
         int bufferSize = 3;
-        DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         Page page0 = bufferManager.newPage();
@@ -308,21 +286,13 @@ public class TableTest {
             e.printStackTrace();
         } finally {
             diskManager.close();
-
-            BufferManagerTest.deleteFile(dbFile);
-            BufferManagerTest.deleteFile(logFile);
+            diskManager.dropFile(dbName);
         }
     }
 
     @Test
     public void getTupleWithIndexTest() throws IOException, ClassNotFoundException {
-        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
-        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
-        File dbFile = new File(dbFilePath);
-        File logFile = new File(logFilePath);
-
         int bufferSize = 100000;
-        DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         Page page0 = bufferManager.newPage();
@@ -412,8 +382,7 @@ public class TableTest {
         } finally {
             diskManager.close();
 
-//            BufferManagerTest.deleteFile(dbFile);
-//            BufferManagerTest.deleteFile(logFile);
+            diskManager.dropFile(dbName);
         }
     }
 

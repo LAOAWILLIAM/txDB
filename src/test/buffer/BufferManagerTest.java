@@ -9,18 +9,22 @@ import txDB.storage.page.TablePage;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class BufferManagerTest {
+    String dbName = "test";
+    DiskManager diskManager = new DiskManager();
+
+    public BufferManagerTest() throws IOException {
+        diskManager.createFile(dbName);
+        diskManager.useFile(dbName);
+    }
+
     @Test
     public void bufferManagerTest1() {
-        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
-        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
-        File dbFile = new File(dbFilePath);
-        File logFile = new File(logFilePath);
-
         int bufferSize = 100;
-        DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         Page page0 = bufferManager.newPage();
@@ -58,20 +62,12 @@ public class BufferManagerTest {
         assertNull(bufferManager.fetchPage(0));
 
         diskManager.close();
-
-        deleteFile(dbFile);
-        deleteFile(logFile);
+        diskManager.dropFile(dbName);
     }
 
     @Test
     public void bufferManagerTest2() {
-        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
-        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
-        File dbFile = new File(dbFilePath);
-        File logFile = new File(logFilePath);
-
         int bufferSize = 100000;
-        DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         int i;
@@ -100,9 +96,7 @@ public class BufferManagerTest {
         assertEquals(page5000.getNextPageId(), 5001);
 
         diskManager.close();
-
-        deleteFile(dbFile);
-        deleteFile(logFile);
+        diskManager.dropFile(dbName);
     }
 
     @Test
@@ -146,13 +140,7 @@ public class BufferManagerTest {
             }
         }
 
-        String dbFilePath = "/Users/williamhu/Documents/pitt/CS-2550/db/test.db";
-        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
-        File dbFile = new File(dbFilePath);
-        File logFile = new File(logFilePath);
-
         int bufferSize = 100000;
-        DiskManager diskManager = new DiskManager(dbFilePath);
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         int i;
@@ -187,20 +175,6 @@ public class BufferManagerTest {
 
         diskManager.close();
 
-        deleteFile(dbFile);
-        deleteFile(logFile);
-
-    }
-
-    /**
-     * common function to delete file while testing
-     * @param file
-     */
-    public static void deleteFile(File file) {
-        if(file.delete()) {
-            System.out.println("File deleted successfully");
-        } else {
-            System.out.println("Failed to delete the file");
-        }
+        diskManager.dropFile(dbName);
     }
 }

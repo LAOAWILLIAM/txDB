@@ -8,32 +8,76 @@ import java.nio.ByteBuffer;
 
 public class DiskManager {
 
+    private final String dbRootPath = "/Users/williamhu/Documents/pitt/CS-2550/db/";
     private FileInputStream dbFileRead;
     private FileOutputStream dbFileWrite;
-    private String dbFilePath;
     private FileInputStream logFileRead;
     private FileOutputStream logFileWrite;
-    private String logFilePath;
     private AtomicInteger nextPageId;
 
-    /**
-     *
-     * @param dbFilePath
-     */
-    public DiskManager(String dbFilePath) {
-        // TODO: nextPageId should be based on persisted id
-        this.nextPageId = new AtomicInteger(0);
+    public DiskManager() {
+    }
 
-        this.dbFilePath = dbFilePath;
-        this.logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
+    public void createFile(String dbName) throws IOException {
+        String dbFilePath = this.dbRootPath + dbName + ".db";
+        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
+        File dbFile = new File(dbFilePath);
+        File logFile = new File(logFilePath);
+
+        boolean res1 = true, res2 = true;
+        if (!dbFile.exists() || !dbFile.isFile()) {
+            res1 = dbFile.createNewFile();
+            res2 = logFile.createNewFile();
+        }
+
+        if (res1) {
+            System.out.println("Create " + dbName);
+            if (res2) {
+                System.out.println("Create log file for " + dbName);
+            }
+        } else {
+            System.out.println(dbName + " already exists");
+        }
+    }
+
+    public void dropFile(String dbName) {
+        String dbFilePath = this.dbRootPath + dbName + ".db";
+        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
+        File dbFile = new File(dbFilePath);
+        File logFile = new File(logFilePath);
+
+        if(dbFile.delete()) {
+            System.out.println("Drop " + dbName);
+            if (logFile.delete()) {
+                System.out.println("Drop log file for " + dbName);
+            } else {
+                System.out.println("Failed to drop log file for " + dbName);
+            }
+        } else {
+            System.out.println("Failed to drop " + dbName);
+        }
+    }
+
+    public void useFile(String dbName) throws FileNotFoundException {
+        String dbFilePath = this.dbRootPath + dbName + ".db";
+        String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
+        File dbFile = new File(dbFilePath);
+        File logFile = new File(logFilePath);
+
+        if (!dbFile.exists() || !dbFile.isFile()) {
+            throw new FileNotFoundException();
+        }
+
+        // nextPageId is based on persisted database file length
+        this.nextPageId = new AtomicInteger((int) (dbFile.length() / Config.PAGE_SIZE));
 
         try {
-            this.dbFileWrite = new FileOutputStream(this.dbFilePath);
-            this.dbFileRead = new FileInputStream(this.dbFilePath);
-            this.logFileWrite = new FileOutputStream(this.logFilePath);
-            this.logFileRead = new FileInputStream(this.logFilePath);
+            this.dbFileWrite = new FileOutputStream(dbFilePath);
+            this.dbFileRead = new FileInputStream(dbFilePath);
+            this.logFileWrite = new FileOutputStream(logFilePath);
+            this.logFileRead = new FileInputStream(logFilePath);
         } catch (FileNotFoundException e) {
-            System.out.println(e);
+            e.printStackTrace();
         }
     }
 
@@ -50,7 +94,7 @@ public class DiskManager {
             if (this.dbFileRead.getChannel().read(pageData, offset) != -1)
                 return pageData.array();
         } catch (IOException e) {
-            System.out.println(e);
+            e.printStackTrace();
         }
 
         return null;
@@ -68,7 +112,7 @@ public class DiskManager {
             // there is no need to use the method `flush`,
             // as there is no buffered data in memory for OutputStream.
         } catch (IOException e) {
-            System.out.println(e);
+            e.printStackTrace();
         }
     }
 
@@ -118,7 +162,7 @@ public class DiskManager {
             this.logFileRead.close();
             this.logFileWrite.close();
         } catch (IOException e) {
-            System.out.println(e);
+            e.printStackTrace();
         }
     }
 }
