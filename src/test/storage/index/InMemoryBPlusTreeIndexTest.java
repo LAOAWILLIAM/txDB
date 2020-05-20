@@ -143,6 +143,10 @@ public class InMemoryBPlusTreeIndexTest {
         int max = 10000000, i;
         for(i = 0; i < max; i++) {
             bpt.insert(i, i);
+//            assertEquals(bpt.find(i), new Integer(i));
+        }
+
+        for(i = 0; i < max; i++) {
             assertEquals(bpt.find(i), new Integer(i));
         }
 

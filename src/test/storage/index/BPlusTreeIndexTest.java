@@ -3,14 +3,17 @@ package test.storage.index;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import test.buffer.BufferManagerTest;
 import txDB.Config;
 import txDB.buffer.BufferManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.index.BPlusTreeIndex;
+import txDB.storage.page.BPlusTreeInnerPageNode;
 import txDB.storage.page.BPlusTreeLeafPageNode;
 import txDB.storage.page.BPlusTreePageNode;
 import txDB.storage.page.Page;
+import txDB.storage.table.Column;
+import txDB.storage.table.RecordID;
+import txDB.type.Type;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -21,6 +24,7 @@ public class BPlusTreeIndexTest {
     DiskManager diskManager = new DiskManager();
 
     public BPlusTreeIndexTest() throws IOException {
+        diskManager.dropFile(dbName);
         diskManager.createFile(dbName);
         diskManager.useFile(dbName);
     }
@@ -70,11 +74,54 @@ public class BPlusTreeIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    public void maxDegreeDetermineTest() {
+        try {
+            Column col0 = new Column("col0", Type.ColumnValueType.INTEGER, 4, 0);
+            BPlusTreeInnerPageNode<Integer, RecordID> bPlusTreeInnerPageNode = new BPlusTreeInnerPageNode<>(16, 1, 2, 0, 0, 100);
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutput out = new ObjectOutputStream(bos);
+            out.writeObject(bPlusTreeInnerPageNode);
+            byte[] pageData = bos.toByteArray();
+            System.out.println("pageData length: " + pageData.length);
+
+            bPlusTreeInnerPageNode.insertAndSort(66, 3);
+            bos.reset();
+            out = new ObjectOutputStream(bos);
+            out.writeObject(bPlusTreeInnerPageNode);
+            pageData = bos.toByteArray();
+            System.out.println("pageData length: " + pageData.length);
+
+            BPlusTreeLeafPageNode<Integer, RecordID> bPlusTreeLeafPageNode = new BPlusTreeLeafPageNode<Integer, RecordID>(16, new RecordID(7, 0), 1, 0, 100);
+            bos.reset();
+            out = new ObjectOutputStream(bos);
+            out.writeObject(bPlusTreeLeafPageNode);
+            pageData = bos.toByteArray();
+            System.out.println("pageData length: " + pageData.length);
+
+            bPlusTreeLeafPageNode.insertAndSort(17, new RecordID(7, 1));
+            bos.reset();
+            out = new ObjectOutputStream(bos);
+            out.writeObject(bPlusTreeLeafPageNode);
+            pageData = bos.toByteArray();
+            System.out.println("pageData length: " + pageData.length);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        diskManager.close();
+
+        diskManager.dropFile(dbName);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     public void rootAsLeafNodeTest() throws IOException, ClassNotFoundException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         bpti.insert(3, 6);
 
         try {
@@ -101,7 +148,7 @@ public class BPlusTreeIndexTest {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         bpti.insert(5, 100);
         bpti.insert(9, 101);
         bpti.insert(13, 102);
@@ -119,7 +166,7 @@ public class BPlusTreeIndexTest {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         bpti.insert(5, 100);
         bpti.insert(9, 101);
         bpti.insert(13, 102);
@@ -146,7 +193,7 @@ public class BPlusTreeIndexTest {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         bpti.insert(5, 100);
         bpti.insert(9, 101);
         bpti.insert(13, 102);
@@ -206,14 +253,19 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void insertScaleTest() throws IOException, ClassNotFoundException {
-        int bufferSize = 100000;
+        int bufferSize = 1000;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100, 100);
 
-        int max = 100000, i;
+        int max = 1000, i;
         for(i = 0; i < max; i++) {
             bpti.insert(i, i);
+            assertEquals(bpti.find(i), new Integer(i));
+        }
+
+        for(i = 0; i < max; i++) {
+//            bpti.insert(i, i);
             assertEquals(bpti.find(i), new Integer(i));
         }
     }
@@ -223,7 +275,7 @@ public class BPlusTreeIndexTest {
         int bufferSize = 100000;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100, 100);
 
         int max = 100000, i;
         for(i = 0; i < max; i++) {
@@ -242,7 +294,7 @@ public class BPlusTreeIndexTest {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
 
         bpti.insert(5, 100);
         bpti.insert(9, 101);
@@ -300,7 +352,7 @@ public class BPlusTreeIndexTest {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
 
         bpti.insert(5, 100);
         bpti.insert(9, 101);
@@ -335,7 +387,7 @@ public class BPlusTreeIndexTest {
         int bufferSize = 10000;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
-        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 200);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 200, 200);
 
         int max = 100000, i;
         for(i = 0; i < max; i++) {

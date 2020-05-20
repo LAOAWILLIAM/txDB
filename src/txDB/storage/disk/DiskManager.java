@@ -68,6 +68,10 @@ public class DiskManager {
             throw new FileNotFoundException();
         }
 
+        if (!logFile.exists() || !logFile.isFile()) {
+            throw new FileNotFoundException();
+        }
+
         // nextPageId is based on persisted database file length
         this.nextPageId = new AtomicInteger((int) (dbFile.length() / Config.PAGE_SIZE));
 

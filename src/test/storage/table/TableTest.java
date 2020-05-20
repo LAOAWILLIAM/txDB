@@ -1,7 +1,6 @@
 package test.storage.table;
 
 import org.junit.Test;
-import test.buffer.BufferManagerTest;
 import txDB.Config;
 import txDB.buffer.BufferManager;
 import txDB.recovery.LogManager;
@@ -17,6 +16,8 @@ import static org.junit.Assert.*;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 
 public class TableTest {
@@ -25,6 +26,7 @@ public class TableTest {
     DiskManager diskManager = new DiskManager();
 
     public TableTest() throws IOException {
+        diskManager.dropFile(dbName);
         diskManager.createFile(dbName);
         diskManager.useFile(dbName);
     }
@@ -292,7 +294,7 @@ public class TableTest {
 
     @Test
     public void getTupleWithIndexTest() throws IOException, ClassNotFoundException {
-        int bufferSize = 100000;
+        int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         Page page0 = bufferManager.newPage();
@@ -326,7 +328,7 @@ public class TableTest {
          * here I do a simulation: create index index0 on table0 (col0);
          */
         String indexName = "index0";
-        BPlusTreeIndex<Integer, RecordID> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100);
+        BPlusTreeIndex<Integer, RecordID> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 144, 144);
         assertEquals(bpti.getRootPageId(), 2);
         ArrayList<Column> indexAttributes = new ArrayList<>();
         indexAttributes.add(col0);
@@ -343,7 +345,9 @@ public class TableTest {
         ArrayList<Object> values = new ArrayList<>();
         Tuple tuple, res;
         int i;
-        for (i = 0; i < 1000000; i++) {
+//        Instant start = Instant.now();
+//        RecordID recordID1 = new RecordID(6, 6);
+        for (i = 0; i < 100000; i++) {
             values.clear();
             int column0 = i * 3 + 1;
             values.add(column0);
@@ -352,12 +356,23 @@ public class TableTest {
             tuple = new Tuple(values, scheme);
             assertTrue(table.insertTuple(tuple, recordID, null));
             bpti.insert(column0, recordID);
+//            bpti.insert(column0, recordID1);
+//            assertEquals(bpti.find(column0).getPageId(), 6);
 //            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
 //            res = table.getTuple(bpti.find(column0), null);
 //            assertNotNull(res);
 //            assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
 //            assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
 //            assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
+        }
+//        Instant end = Instant.now();
+//        Duration timeElapsed = Duration.between(start, end);
+//        System.out.println("Time elapsed: " + timeElapsed.toMillis());
+
+        for (i = 0; i < 100000; i++) {
+//                System.out.println(i);
+//            assertEquals(bpti.find(i * 3 + 1).getPageId(), 6);
+            assertEquals(table.getTuple(bpti.find(i * 3 + 1), null).getValue(scheme, 1), new Integer(i * 3 + 2));
         }
 
         bufferManager.flushAllPages();
@@ -373,16 +388,21 @@ public class TableTest {
             assertEquals(metaDataPage.getIndexMetaData(indexName).getIndexName(), "index0");
 
             table = new Table(bufferManager, null, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
-            bpti = new BPlusTreeIndex<>(bufferManager, metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 100);
-            assertEquals(table.getTuple(bpti.find(3001), null).getValue(scheme, 1), new Integer(3002));
-            assertEquals(table.getTuple(bpti.find(18001), null).getValue(scheme, 1), new Integer(18002));
-            assertEquals(table.getTuple(bpti.find(450001), null).getValue(scheme, 1), new Integer(450002));
+            bpti = new BPlusTreeIndex<>(bufferManager, metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 144, 144);
+            for (i = 0; i < 100000; i++) {
+//                System.out.println(i);
+                assertEquals(table.getTuple(bpti.find(i * 3 + 1), null).getValue(scheme, 1), new Integer(i * 3 + 2));
+            }
+//            assertEquals(table.getTuple(bpti.find(3001), null).getValue(scheme, 1), new Integer(3002));
+//            assertEquals(table.getTuple(bpti.find(18001), null).getValue(scheme, 1), new Integer(18002));
+//            assertEquals(table.getTuple(bpti.find(45001), null).getValue(scheme, 1), new Integer(45002));
+//            assertEquals(table.getTuple(bpti.find(450001), null).getValue(scheme, 1), new Integer(450002));
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         } finally {
             diskManager.close();
 
-            diskManager.dropFile(dbName);
+//            diskManager.dropFile(dbName);
         }
     }
 

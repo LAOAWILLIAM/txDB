@@ -1,7 +1,6 @@
 package test.storage.page;
 
 import org.junit.Test;
-import test.buffer.BufferManagerTest;
 import txDB.buffer.BufferManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.page.Page;
@@ -12,7 +11,6 @@ import txDB.type.Type.ColumnValueType;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.Assert.*;
 
