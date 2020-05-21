@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -281,6 +282,38 @@ public class InMemoryBPlusTreeIndexTest {
 //            System.out.println();
 //            if (i < max - 1)
 //                assertEquals(bpt.find(i + 1), new Integer(i + 1));
+        }
+    }
+
+    @Test
+    public void scanLeafNodeTest() {
+        InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(300);
+
+        int max = 10000000, i;
+        for(i = 0; i < max; i++) {
+            bpt.insert(i, i);
+        }
+
+        ArrayList<Integer> res = new ArrayList<>(bpt.scanLeafNode(0, true));
+        i = 0;
+        for (Integer value : res) {
+            assertEquals(value, new Integer(i));
+            i++;
+        }
+
+        res = new ArrayList<>(bpt.scanLeafNode(max, false));
+        Collections.reverse(res);
+        i = 0;
+        for (Integer value : res) {
+            assertEquals(value, new Integer(i));
+            i++;
+        }
+
+        res = new ArrayList<>(bpt.scanLeafNode(5000000, true));
+        i = 5000000;
+        for (Integer value : res) {
+            assertEquals(value, new Integer(i));
+            i++;
         }
     }
 }

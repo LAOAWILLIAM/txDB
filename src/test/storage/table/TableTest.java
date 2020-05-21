@@ -328,7 +328,7 @@ public class TableTest {
          * here I do a simulation: create index index0 on table0 (col0);
          */
         String indexName = "index0";
-        BPlusTreeIndex<Integer, RecordID> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 144, 144);
+        BPlusTreeIndex<Integer, RecordID> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 144, 177);
         assertEquals(bpti.getRootPageId(), 2);
         ArrayList<Column> indexAttributes = new ArrayList<>();
         indexAttributes.add(col0);
@@ -369,11 +369,11 @@ public class TableTest {
 //        Duration timeElapsed = Duration.between(start, end);
 //        System.out.println("Time elapsed: " + timeElapsed.toMillis());
 
-        for (i = 0; i < 100000; i++) {
-//                System.out.println(i);
-//            assertEquals(bpti.find(i * 3 + 1).getPageId(), 6);
-            assertEquals(table.getTuple(bpti.find(i * 3 + 1), null).getValue(scheme, 1), new Integer(i * 3 + 2));
-        }
+//        for (i = 0; i < 100000; i++) {
+////                System.out.println(i);
+////            assertEquals(bpti.find(i * 3 + 1).getPageId(), 6);
+//            assertEquals(table.getTuple(bpti.find(i * 3 + 1), null).getValue(scheme, 1), new Integer(i * 3 + 2));
+//        }
 
         bufferManager.flushAllPages();
         assertEquals(bufferManager.getSize(), 0);
@@ -388,7 +388,7 @@ public class TableTest {
             assertEquals(metaDataPage.getIndexMetaData(indexName).getIndexName(), "index0");
 
             table = new Table(bufferManager, null, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
-            bpti = new BPlusTreeIndex<>(bufferManager, metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 144, 144);
+            bpti = new BPlusTreeIndex<>(bufferManager, metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 144, 177);
             for (i = 0; i < 100000; i++) {
 //                System.out.println(i);
                 assertEquals(table.getTuple(bpti.find(i * 3 + 1), null).getValue(scheme, 1), new Integer(i * 3 + 2));

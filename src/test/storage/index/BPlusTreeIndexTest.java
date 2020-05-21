@@ -7,6 +7,7 @@ import txDB.Config;
 import txDB.buffer.BufferManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.index.BPlusTreeIndex;
+import txDB.storage.index.InMemoryBPlusTreeIndex;
 import txDB.storage.page.BPlusTreeInnerPageNode;
 import txDB.storage.page.BPlusTreeLeafPageNode;
 import txDB.storage.page.BPlusTreePageNode;
@@ -18,6 +19,7 @@ import txDB.type.Type;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class BPlusTreeIndexTest {
     String dbName = "test";
@@ -344,7 +346,7 @@ public class BPlusTreeIndexTest {
         bpti.insert(100, 116);
         assertEquals(bpti.find(100), new Integer(116));
 
-        bpti.traverseLeafNodes();
+//        bpti.traverseLeafNodes(120);
     }
 
     @Test
@@ -400,6 +402,41 @@ public class BPlusTreeIndexTest {
             assertNull(bpti.find(i));
             if (i < max - 1)
                 assertEquals(bpti.find(i + 1), new Integer(i + 1));
+        }
+    }
+
+    @Test
+    public void scanLeafNodeTest() {
+        int bufferSize = 100;
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 144, 144);
+
+        int max = 100000, i;
+        for(i = 0; i < max; i++) {
+            bpti.insert(i, i);
+        }
+
+        ArrayList<Integer> res = new ArrayList<>(bpti.scanLeafNode(0, true));
+        i = 0;
+        for (Integer value : res) {
+            assertEquals(value, new Integer(i));
+            i++;
+        }
+
+        res = new ArrayList<>(bpti.scanLeafNode(max, false));
+        Collections.reverse(res);
+        i = 0;
+        for (Integer value : res) {
+            assertEquals(value, new Integer(i));
+            i++;
+        }
+
+        res = new ArrayList<>(bpti.scanLeafNode(5000, true));
+        i = 5000;
+        for (Integer value : res) {
+            assertEquals(value, new Integer(i));
+            i++;
         }
     }
 }

@@ -140,6 +140,16 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
             return null;
         }
 
+        private int getValueIndex(K key) {
+            ListIterator<K> iterator = keys.listIterator();
+            while (iterator.hasNext()) {
+                if (iterator.next().compareTo(key) == 0) {
+                    return iterator.previousIndex();
+                }
+            }
+            return 0;
+        }
+
         private void insertAndSort(K key, V value) {
             if (key.compareTo(keys.get(0)) < 0) {
                 keys.add(0, key);
@@ -573,15 +583,19 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
      */
     public void traverseLeafNodes() {
         LeafNode<K, V> curLeafNode = traverseLeafNodesHelper(root);
+//        LeafNode<K, V> curLeafNode = findHelper(root, key);
 
         while (curLeafNode != null) {
             System.out.println(curLeafNode.keys + ", " + curLeafNode.values);
             curLeafNode = curLeafNode.nextLeaf;
+//            curLeafNode = curLeafNode.prevLeaf;
         }
     }
 
     /**
      * return the first leaf node using leftmost DFS
+     * @param root
+     * @return
      */
     private LeafNode<K, V> traverseLeafNodesHelper(Node<K, V> root) {
         if (root == null) return null;
@@ -589,5 +603,41 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
         else {
             return traverseLeafNodesHelper(((InnerNode<K, V>) root).children.get(0));
         }
+    }
+
+    /**
+     * range scanning through leaf nodes, e.g., select * from table0 where col0 > 50;
+     * @param key
+     * @param isLarger
+     * @return
+     */
+    public List<V> scanLeafNode(K key, boolean isLarger) {
+        ArrayList<V> res = new ArrayList<>();
+        LeafNode<K, V> curLeafNode = findHelper(root, key);
+
+        if (curLeafNode != null) {
+            int startIndex = curLeafNode.getValueIndex(key);
+            if (isLarger) {
+                res.addAll(curLeafNode.values.subList(startIndex, curLeafNode.values.size()));
+                curLeafNode = curLeafNode.nextLeaf;
+                while (curLeafNode != null) {
+                    res.addAll(curLeafNode.values);
+                    curLeafNode = curLeafNode.nextLeaf;
+                }
+            } else {
+                ArrayList<V> tmp = new ArrayList<>(curLeafNode.values.subList(startIndex, curLeafNode.values.size()));
+                Collections.reverse(tmp);
+                res.addAll(tmp);
+                curLeafNode = curLeafNode.prevLeaf;
+                while (curLeafNode != null) {
+                    tmp = new ArrayList<>(curLeafNode.values);
+                    Collections.reverse(tmp);
+                    res.addAll(tmp);
+                    curLeafNode = curLeafNode.prevLeaf;
+                }
+            }
+        }
+
+        return res;
     }
 }

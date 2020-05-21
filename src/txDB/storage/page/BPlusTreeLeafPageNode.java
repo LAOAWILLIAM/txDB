@@ -18,6 +18,7 @@ public class BPlusTreeLeafPageNode<K extends Comparable<K>, V> extends BPlusTree
         setParentPageId(parentPageId);
         setIndexPageType(IndexPageType.LEAFPAGE);
         setNextPageId(Config.INVALID_PAGE_ID);
+        setPrevPageId(Config.INVALID_PAGE_ID);
         setMaxSize(maxSize);
         keys = new ArrayList<>();
         values = new ArrayList<>();
@@ -30,6 +31,7 @@ public class BPlusTreeLeafPageNode<K extends Comparable<K>, V> extends BPlusTree
         setParentPageId(parentPageId);
         setIndexPageType(IndexPageType.LEAFPAGE);
         setNextPageId(Config.INVALID_PAGE_ID);
+        setPrevPageId(Config.INVALID_PAGE_ID);
         setMaxSize(maxSize);
         keys = new ArrayList<>(ks);
         values = new ArrayList<>(vs);
@@ -83,6 +85,16 @@ public class BPlusTreeLeafPageNode<K extends Comparable<K>, V> extends BPlusTree
             }
         }
         return null;
+    }
+
+    public int getValueIndex(K key) {
+        ListIterator<K> iterator = keys.listIterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().compareTo(key) == 0) {
+                return iterator.previousIndex();
+            }
+        }
+        return 0;
     }
 
     public void remove(K key) {

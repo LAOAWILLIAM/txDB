@@ -11,11 +11,10 @@ import java.util.*;
  * This class is a disk-based B+ tree
  */
 public class BPlusTreeIndex<K extends Comparable<K>, V> {
-    // TODO: thread-safe needed
+    // TODO: thread-safe needed, here I choose optimistic assumption
     private BufferManager bufferManager;
     private int rootPageId;
     private BPlusTreePageNode<K, V> rootPageNode;
-    // TODO: max degree should be based on key and value size, and different in inner and leaf node.
     private final int MAXDEGREE;
     private final int MAXDEGREE1;
 
@@ -175,7 +174,6 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         leftLeafPageNode.getKeys().subList(from, to).clear();
         leftLeafPageNode.getValues().subList(from, to).clear();
 
-
         if (leftLeafPageNode.getNextPageId() != Config.INVALID_PAGE_ID) {
             Page nextPage = bufferManager.fetchPage(leftLeafPageNode.getNextPageId());
             BPlusTreeLeafPageNode<K, V> nextLeafPageNode = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(nextPage);
@@ -185,6 +183,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
             serializePageNode(nextPage, nextLeafPageNode);
             rightLeafPageNode.setNextPageId(leftLeafPageNode.getNextPageId());
         }
+//        System.out.println();
         rightLeafPageNode.setPrevPageId(leftLeafPageNode.getPageId());
         leftLeafPageNode.setNextPageId(rightLeafPageNode.getPageId());
 
@@ -195,6 +194,9 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
             leftLeafPageNode.setPageId(leftPage.getPageId());
             leftLeafPageNode.setParentPageId(rootPageId);
             rightLeafPageNode.setParentPageId(rootPageId);
+            rightLeafPageNode.setPrevPageId(leftLeafPageNode.getPageId());
+//            System.out.println("left page: " + leftLeafPageNode.getPageId() + ", left page prev: " + leftLeafPageNode.getPrevPageId() + ", left page next: " + leftLeafPageNode.getNextPageId());
+//            System.out.println("right page: " + rightLeafPageNode.getPageId() + ", right page prev: " + rightLeafPageNode.getPrevPageId() + ", right page next: " + rightLeafPageNode.getNextPageId());
             rootPageNode = new BPlusTreeInnerPageNode<>(splitKey, leftLeafPageNode.getPageId(), rightLeafPageNode.getPageId(), rootPageNode.getPageId(), rootPageNode.getParentPageId(), MAXDEGREE1);
             handleRootPageNode(newPage, leftPage, rightLeafPageNode, leftLeafPageNode);
 //            bufferManager.unpinPage(newPage.getPageId(), true);
@@ -360,6 +362,12 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param rootPageId
+     * @param key
+     * @param keyIndex
+     */
     @SuppressWarnings("unchecked")
     private void deleteHelper(int rootPageId, K key, int keyIndex) {
         Page rootPage = bufferManager.fetchPage(rootPageId);
@@ -395,6 +403,12 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param bPlusTreeLeafPageNode
+     * @param bPlusTreeLeafPage
+     * @param keyIndex
+     */
     @SuppressWarnings("unchecked")
     private void redistributeLeafNode(BPlusTreeLeafPageNode<K, V> bPlusTreeLeafPageNode, Page bPlusTreeLeafPage, int keyIndex) {
         Page bPlusTreeLeafPage1 = bufferManager.fetchPage(bPlusTreeLeafPageNode.getNextPageId());
@@ -410,6 +424,14 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param page
+     * @param smallNode
+     * @param page1
+     * @param largeNode
+     * @param keyIndex
+     */
     @SuppressWarnings("unchecked")
     private void redistributeLeafNodeHelper(Page page, BPlusTreeLeafPageNode<K, V> smallNode, Page page1, BPlusTreeLeafPageNode<K, V> largeNode, int keyIndex) {
         int totalSize = smallNode.getKeys().size() + largeNode.getKeys().size();
@@ -455,6 +477,11 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param parentPage
+     * @param parentNode
+     */
     @SuppressWarnings("unchecked")
     private void redistributeInnerNode(Page parentPage, BPlusTreeInnerPageNode<K, V> parentNode) {
         int i, parentIndex = -1;
@@ -488,6 +515,14 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param page
+     * @param smallNode
+     * @param page1
+     * @param largeNode
+     * @param parentIndex
+     */
     @SuppressWarnings("unchecked")
     private void redistributeInnerNodeHelper(Page page, BPlusTreeInnerPageNode<K, V> smallNode, Page page1, BPlusTreeInnerPageNode<K, V> largeNode, int parentIndex) {
         int totalSize = smallNode.getKeys().size() + largeNode.getKeys().size();
@@ -536,6 +571,14 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param page
+     * @param smallNode
+     * @param page1
+     * @param largeNode
+     * @param keyIndex
+     */
     @SuppressWarnings("unchecked")
     private void mergeLeafNode(Page page, BPlusTreeLeafPageNode<K, V> smallNode, Page page1, BPlusTreeLeafPageNode<K, V> largeNode, int keyIndex) {
         smallNode.getKeys().addAll(largeNode.getKeys());
@@ -572,6 +615,14 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         }
     }
 
+    /**
+     *
+     * @param page
+     * @param smallNode
+     * @param page1
+     * @param largeNode
+     * @param parentIndex
+     */
     @SuppressWarnings("unchecked")
     private void mergeInnerNode(Page page, BPlusTreeInnerPageNode<K, V> smallNode, Page page1, BPlusTreeInnerPageNode<K, V> largeNode, int parentIndex) {
 //        System.out.println("inner parentIndex: " + parentIndex);
@@ -642,23 +693,27 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
     public void traverseLeafNodes() {
         int curPageId = rootPageId;
         BPlusTreeLeafPageNode<K, V> curLeafNode = traverseLeafNodesHelper(curPageId);
+//        BPlusTreeLeafPageNode<K, V> curLeafNode = findHelper(rootPageId, key);
 
         // curPageId = -1 will cause diskManager Negative Position Exception
         while (curPageId != Config.INVALID_PAGE_ID) {
-            if (curPageId != rootPageId)
-                curLeafNode = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(curPageId);
+            curLeafNode = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(curPageId);
 //            assert curLeafNode != null;
             if (curLeafNode != null) {
                 System.out.println(curLeafNode.getKeys() + ", " + curLeafNode.getValues());
+                bufferManager.unpinPage(curPageId, false);
                 curPageId = curLeafNode.getNextPageId();
+//                curPageId = curLeafNode.getPrevPageId();
             } else break;
 
-            bufferManager.unpinPage(curPageId, false);
+//            bufferManager.unpinPage(curPageId, false);
         }
     }
 
     /**
      * return the first leaf node using leftmost DFS
+     * @param rootPageId
+     * @return
      */
     @SuppressWarnings("unchecked")
     private BPlusTreeLeafPageNode<K, V> traverseLeafNodesHelper(int rootPageId) {
@@ -669,6 +724,62 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
             return traverseLeafNodesHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(0));
         }
     }
+
+    /**
+     * range scanning through leaf nodes, e.g., select * from table0 where col0 > 50;
+     * @param key
+     * @param isLarger
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public List<V> scanLeafNode(K key, boolean isLarger) {
+        ArrayList<V> res = new ArrayList<>();
+        BPlusTreeLeafPageNode<K, V> curLeafPageNode = findHelper(rootPageId, key);
+
+        if (curLeafPageNode != null) {
+            int startIndex = curLeafPageNode.getValueIndex(key), curPageId = curLeafPageNode.getPageId();
+//            System.out.println(curPageId);
+            if (isLarger) {
+                res.addAll(curLeafPageNode.getValues().subList(startIndex, curLeafPageNode.getValues().size()));
+                if (curLeafPageNode.getNextPageId() != Config.INVALID_PAGE_ID)
+                    curLeafPageNode = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(curLeafPageNode.getNextPageId());
+                else curLeafPageNode = null;
+                bufferManager.unpinPage(curPageId, false);
+                while (curLeafPageNode != null) {
+                    res.addAll(curLeafPageNode.getValues());
+                    curPageId = curLeafPageNode.getPageId();
+//                    System.out.println("cur: " + curPageId + ", next: " + curLeafPageNode.getNextPageId());
+                    if (curLeafPageNode.getNextPageId() != Config.INVALID_PAGE_ID)
+                        curLeafPageNode = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(curLeafPageNode.getNextPageId());
+                    else curLeafPageNode = null;
+                    bufferManager.unpinPage(curPageId, false);
+                }
+            } else {
+                ArrayList<V> tmp = new ArrayList<>(curLeafPageNode.getValues().subList(startIndex, curLeafPageNode.getValues().size()));
+                Collections.reverse(tmp);
+                res.addAll(tmp);
+                if (curLeafPageNode.getPrevPageId() != Config.INVALID_PAGE_ID)
+                    curLeafPageNode = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(curLeafPageNode.getPrevPageId());
+                else curLeafPageNode = null;
+                bufferManager.unpinPage(curPageId, false);
+                while (curLeafPageNode != null) {
+                    tmp = new ArrayList<>(curLeafPageNode.getValues());
+                    Collections.reverse(tmp);
+                    res.addAll(tmp);
+                    curPageId = curLeafPageNode.getPageId();
+//                    System.out.println("cur: " + curPageId + ", prev: " + curLeafPageNode.getPrevPageId());
+                    if (curLeafPageNode.getPrevPageId() != Config.INVALID_PAGE_ID)
+                        curLeafPageNode = (BPlusTreeLeafPageNode<K, V>) deserializePageNode(curLeafPageNode.getPrevPageId());
+                    else curLeafPageNode = null;
+                    bufferManager.unpinPage(curPageId, false);
+                }
+            }
+        }
+
+        return res;
+    }
+
+    /************************************* serialize and deserialize functions ************************************/
 
     /**
      *
