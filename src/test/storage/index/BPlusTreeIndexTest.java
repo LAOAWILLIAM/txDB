@@ -407,7 +407,8 @@ public class BPlusTreeIndexTest {
 
     @Test
     public void scanLeafNodeTest() {
-        int bufferSize = 100;
+        // buffer size is at least 5 here, meaning at least 20 kb memory assigned
+        int bufferSize = 5;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 144, 144);
@@ -432,8 +433,8 @@ public class BPlusTreeIndexTest {
             i++;
         }
 
-        res = new ArrayList<>(bpti.scanLeafNode(5000, true));
-        i = 5000;
+        res = new ArrayList<>(bpti.scanLeafNode(50000, true));
+        i = 50000;
         for (Integer value : res) {
             assertEquals(value, new Integer(i));
             i++;
