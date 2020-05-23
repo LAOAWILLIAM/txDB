@@ -2,7 +2,7 @@ package txDB.concurrency;
 
 public class Transaction {
     // TODO
-    public enum TransactionState {GROWING, SHRINKING, COMMITTED, ABORTED}
+    public enum TransactionState {GROWING, SHRINKING, COMMITTED, ABORTED, RESTARTED}
     private int txnId;
     private TransactionState transactionState;
 
