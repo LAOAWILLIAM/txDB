@@ -144,6 +144,22 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
         public Node<K, V> getParent() {
             return parent;
         }
+
+        public void readLatch() {
+            readLatch.lock();
+        }
+
+        public void readUnlatch() {
+            readLatch.unlock();
+        }
+
+        public void writeLatch() {
+            writeLatch.lock();
+        }
+
+        public void writeUnlatch() {
+            writeLatch.unlock();
+        }
     }
 
     private class InnerNode<K extends Comparable<K>, V> extends Node<K, V> {
@@ -309,33 +325,35 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
         if (root == null) return;
 
         if (root.isLeafNode || txn.getTransactionState() == TransactionState.RESTARTED) {
-            System.out.println("Inserting " + key.toString() + ": get write latch");
-            root.writeLatch.lock();
+            System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": get write latch");
+            root.writeLatch();
         } else {
-            System.out.println("Inserting " + key.toString() + ": get read latch");
-            root.readLatch.lock();
+            System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": get read latch");
+            root.readLatch();
         }
         txn.pushIndexNodeQueue(root);
         if (!root.equals(this.root)) {
             Node<K, V> node = txn.popIndexNodeQueue();
-            System.out.println("Inserting " + key.toString() + ": when node with keys: " + root.keys + " get latch, then unlatch node with keys: " + node.keys);
+            System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": when node with keys: " + root.keys + " get latch, then unlatch node with keys: " + node.keys);
             if (txn.getTransactionState() != TransactionState.RESTARTED) {
-                System.out.println("Inserting " + key.toString() + ": release read latch");
-                node.readLatch.unlock();
+                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release read latch");
+                node.readUnlatch();
             } else {
-                System.out.println("Inserting " + key.toString() + ": release write latch");
-                node.writeLatch.unlock();
+                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
+                node.writeUnlatch();
             }
         }
 
         if (root.isLeafNode) {
-            if (root.keys.size() + 1 >= MAXDEGREE && txn.getTransactionState() != TransactionState.RESTARTED) {
+            if (root.keys.size() + 1 >= MAXDEGREE
+                    && txn.getTransactionState() != TransactionState.RESTARTED
+                    && !this.root.isLeafNode) {
                 Node<K, V> node = txn.popIndexNodeQueue();
                 assert node.equals(root);
                 assert txn.getIndexNodeQueue().size() == 0;
-                System.out.println("Inserting " + key.toString() + ": release write latch");
-                root.writeLatch.unlock();
-                System.out.println("Inserting " + key.toString() + ": not safe, restart txn");
+                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
+                root.writeUnlatch();
+                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": not safe, restart txn");
                 transactionManager.restart(txn);
                 insertHelper(this.root, key, value, txn);
                 txn.setTransactionState(TransactionState.GROWING);
@@ -349,8 +367,8 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
                 Node<K, V> node = txn.popIndexNodeQueue();
                 assert node.equals(root);
                 assert txn.getIndexNodeQueue().size() == 0;
-                System.out.println("Inserting " + key.toString() + ": release write latch");
-                root.writeLatch.unlock();
+                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
+                root.writeUnlatch();
             }
         } else {
             if (key.compareTo(root.keys.get(0)) < 0) {
@@ -476,19 +494,19 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
     private LeafNode<K, V> findHelper(Node<K, V> root, K key, Transaction txn) {
         if (root == null) return null;
 
-        root.readLatch.lock();
+        root.readLatch();
         txn.pushIndexNodeQueue(root);
         if (!root.equals(this.root)) {
             Node<K, V> node = txn.popIndexNodeQueue();
-            System.out.println("Finding: when node with keys: " + root.keys + " get latch, then unlatch node with keys: " + node.keys);
-            node.readLatch.unlock();
+            System.out.println("Finding " + key.toString() + " in txn " + txn.getTxnId() + ": when node with keys: " + root.keys + " get latch, then unlatch node with keys: " + node.keys);
+            node.readUnlatch();
         }
 
         if (root.isLeafNode) {
-            System.out.println("Finding: finally, unlatch node with keys: " + root.keys);
+            System.out.println("Finding " + key.toString() + " in txn " + txn.getTxnId() + ": finally, unlatch node with keys: " + root.keys);
             Node<K, V> node = txn.popIndexNodeQueue();
             assert node.equals(root);
-            root.readLatch.unlock();
+            root.readUnlatch();
             return ((LeafNode<K, V>) root);
         } else {
             if (key.compareTo(root.keys.get(0)) < 0) {

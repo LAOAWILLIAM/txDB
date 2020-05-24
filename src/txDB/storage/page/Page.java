@@ -4,18 +4,27 @@ import txDB.Config;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Page {
     private int pageId;
     private boolean isDirty;
     private int pinCount;
     private byte[] pageData;
+    private ReadWriteLock readWriteLatch;
+    private Lock readLatch;
+    private Lock writeLatch;
 
     public Page() {
         this.pageId = Config.INVALID_PAGE_ID;
         this.pageData = new byte[Config.PAGE_SIZE];
         this.isDirty = false;
         this.pinCount = 0;
+        this.readWriteLatch = new ReentrantReadWriteLock();
+        this.readLatch = readWriteLatch.readLock();
+        this.writeLatch = readWriteLatch.writeLock();
 //        this.resetData();
     }
 
@@ -68,5 +77,21 @@ public class Page {
 
     public void resetData() {
         Arrays.fill(this.pageData, (byte)0);
+    }
+
+    public void readLatch() {
+        readLatch.lock();
+    }
+
+    public void readUnlatch() {
+        readLatch.unlock();
+    }
+
+    public void writeLatch() {
+        writeLatch.lock();
+    }
+
+    public void writeUnlatch() {
+        writeLatch.unlock();
     }
 }

@@ -25,7 +25,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
         MAXDEGREE = maxDegree;
         MAXDEGREE1 = maxDegree1;
         if (!isEmpty()) {
-            rootPageNode = (BPlusTreePageNode) deserializePageNode(rootPageId);
+            rootPageNode = (BPlusTreePageNode<K, V>) deserializePageNode(rootPageId);
         } else {
             startNewTree();
         }

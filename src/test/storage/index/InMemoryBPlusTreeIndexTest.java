@@ -2,6 +2,7 @@ package test.storage.index;
 
 import org.junit.Test;
 
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -327,59 +328,101 @@ public class InMemoryBPlusTreeIndexTest {
     public void multipleThreadOperationTest() throws InterruptedException {
         class T0Operation implements Runnable {
             private InMemoryBPlusTreeIndex<Integer, Integer> bpt;
-            public T0Operation(InMemoryBPlusTreeIndex<Integer, Integer> bpt) {
+            private InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn;
+            public T0Operation(InMemoryBPlusTreeIndex<Integer, Integer> bpt, InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn) {
                 this.bpt = bpt;
+                this.txn = txn;
             }
 
             @Override
             public void run() {
-                bpt.find(50, null);
+                try {
+                    TimeUnit.MILLISECONDS.sleep(Math.round(200));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Finding 100 in txn " + txn.getTxnId() + ": result is " + bpt.find(100, txn));
             }
         }
 
         class T1Operation implements Runnable {
             private InMemoryBPlusTreeIndex<Integer, Integer> bpt;
-            public T1Operation(InMemoryBPlusTreeIndex<Integer, Integer> bpt) {
+            private InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn;
+            public T1Operation(InMemoryBPlusTreeIndex<Integer, Integer> bpt, InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn) {
                 this.bpt = bpt;
+                this.txn = txn;
             }
 
             @Override
             public void run() {
-                bpt.insert(60, 60, null);
+                try {
+                    TimeUnit.MILLISECONDS.sleep(Math.round(200));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                bpt.insert(100, 116, txn);
+            }
+        }
+
+        class T2Operation implements Runnable {
+            private InMemoryBPlusTreeIndex<Integer, Integer> bpt;
+            private InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn;
+            public T2Operation(InMemoryBPlusTreeIndex<Integer, Integer> bpt, InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn) {
+                this.bpt = bpt;
+                this.txn = txn;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(Math.round(200));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Finding 1 in txn " + txn.getTxnId() + ": result is " + bpt.find(1, txn));
             }
         }
 
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
-        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn = bpt.getTransactionManager().begin();
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn1 = bpt.getTransactionManager().begin();
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn2 = bpt.getTransactionManager().begin();
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn3 = bpt.getTransactionManager().begin();
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn4 = bpt.getTransactionManager().begin();
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn5 = bpt.getTransactionManager().begin();
 
-        bpt.insert(5, 100, txn);     // safe
-        bpt.insert(9, 101, txn);     // safe
-        bpt.insert(13, 102, txn);    // split in leaf
-        bpt.insert(20, 103, txn);    // split in leaf
-        bpt.insert(16, 104, txn);    // split in leaf and inner
-        bpt.insert(50, 105, txn);    // split in leaf
-        bpt.insert(1, 106, txn);     // safe
-        bpt.insert(80, 107, txn);    // split in leaf and inner
-        bpt.insert(8, 108, txn);     // split in leaf
-        bpt.insert(12, 109, txn);    // safe
-        bpt.insert(11, 110, txn);    // split in leaf and inner
-        bpt.insert(17, 111, txn);    // safe
-        bpt.insert(18, 112, txn);    // split in leaf
-        bpt.insert(14, 113, txn);    // safe
-        bpt.insert(15, 114, txn);    // split in leaf and inner
-        bpt.insert(120, 115, txn);   // split in leaf
-        bpt.insert(100, 116, txn);   // split in leaf and inner
+        bpt.insert(5, 100, txn0);     // safe
+        bpt.insert(9, 101, txn0);     // safe
+        bpt.insert(13, 102, txn0);    // split in leaf
+        bpt.insert(20, 103, txn0);    // split in leaf
+        bpt.insert(16, 104, txn0);    // split in leaf and inner
+        bpt.insert(50, 105, txn0);    // split in leaf
+        bpt.insert(1, 106, txn0);     // safe
+        bpt.insert(80, 107, txn0);    // split in leaf and inner
+        bpt.insert(8, 108, txn0);     // split in leaf
+        bpt.insert(12, 109, txn0);    // safe
+        bpt.insert(11, 110, txn0);    // split in leaf and inner
+        bpt.insert(17, 111, txn0);    // safe
+        bpt.insert(18, 112, txn0);    // split in leaf
+        bpt.insert(14, 113, txn0);    // safe
+        bpt.insert(15, 114, txn0);    // split in leaf and inner
+        bpt.insert(120, 115, txn0);   // split in leaf
+//        bpt.insert(100, 116, txn0);   // split in leaf and inner
 
-        bpt.find(100, txn);
-
-        bpt.traverseLeafNodes();
-
-//        ExecutorService executorService = Executors.newCachedThreadPool();
-//        executorService.submit(new T0Operation(bpt));
-//        executorService.submit(new T1Operation(bpt));
+//        bpt.find(100, txn0);
 //
-//        // give detector enough time to finish detecting
-//        TimeUnit.SECONDS.sleep(2);
-//        executorService.shutdown();
+//        bpt.traverseLeafNodes();
+
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        executorService.submit(new T0Operation(bpt, txn1));
+        executorService.submit(new T1Operation(bpt, txn2));
+        executorService.submit(new T0Operation(bpt, txn3));
+        executorService.submit(new T2Operation(bpt, txn4));
+
+        // give detector enough time to finish detecting
+        TimeUnit.SECONDS.sleep(1);
+        executorService.shutdown();
+
+        assertEquals(bpt.find(100, txn5), new Integer(116));
     }
 }
