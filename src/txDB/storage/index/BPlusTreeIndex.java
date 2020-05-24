@@ -2,6 +2,7 @@ package txDB.storage.index;
 
 import txDB.buffer.BufferManager;
 import txDB.Config;
+import txDB.concurrency.Transaction;
 import txDB.storage.page.*;
 
 import java.io.*;
@@ -61,14 +62,14 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      * @param key
      * @param value
      */
-    public void insert(K key, V value) {
+    public void insert(K key, V value, Transaction txn) {
 //        if (isEmpty()) {
         if (!isInitialized()) {
-            startNewTree(key, value);
+            startNewTree(key, value, txn);
             return;
         }
 
-        insertHelper(rootPageId, key, value);
+        insertHelper(rootPageId, key, value, txn);
     }
 
     /**
@@ -76,7 +77,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      * @param key
      * @param value
      */
-    private void startNewTree(K key, V value) {
+    private void startNewTree(K key, V value, Transaction txn) {
         Page rootPage = bufferManager.fetchPage(rootPageId);
         rootPageNode = new BPlusTreeLeafPageNode<>(key, value, rootPageId, Config.INVALID_PAGE_ID, MAXDEGREE);
         ((BPlusTreeLeafPageNode<K, V>) rootPageNode).insertAndSort(key, value);
@@ -95,7 +96,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      * @param value
      */
     @SuppressWarnings("unchecked")
-    private void insertHelper(int rootPageId, K key, V value) {
+    private void insertHelper(int rootPageId, K key, V value, Transaction txn) {
         Page rootPage = bufferManager.fetchPage(rootPageId);
         try {
             BPlusTreePageNode<K, V> bPlusTreePageNode = (BPlusTreePageNode<K, V>) deserializePageNode(rootPage);
@@ -115,9 +116,9 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                 this.bufferManager.unpinPage(rootPageId, true);
             } else {
                 if (key.compareTo(bPlusTreePageNode.getKeys().get(0)) < 0) {
-                    insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(0), key, value);
+                    insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(0), key, value, txn);
                 } else if (key.compareTo(bPlusTreePageNode.getKeys().get(bPlusTreePageNode.getKeys().size() - 1)) >= 0) {
-                    insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().size() - 1), key, value);
+                    insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().size() - 1), key, value, txn);
                 } else {
 //                    int i;
 //                    for (i = 1; i < bPlusTreePageNode.getKeys().size(); i++) {
@@ -133,13 +134,13 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                         int mid = start + (end - start) / 2;
                         if (bPlusTreePageNode.getKeys().get(mid).compareTo(key) > 0) {
                             if (bPlusTreePageNode.getKeys().get(mid - 1).compareTo(key) <= 0) {
-                                insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(mid), key, value);
+                                insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(mid), key, value, txn);
                                 break;
                             } else {
                                 end = mid - 1;
                             }
                         } else if (bPlusTreePageNode.getKeys().get(mid).compareTo(key) == 0) {
-                            insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(mid), key, value);
+                            insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(mid), key, value, txn);
                             break;
                         } else {
                             start = mid + 1;
@@ -299,8 +300,8 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      * @param key
      * @return
      */
-    public V find(K key) {
-        BPlusTreeLeafPageNode<K, V> targetPageNode = findHelper(rootPageId, key);
+    public V find(K key, Transaction txn) {
+        BPlusTreeLeafPageNode<K, V> targetPageNode = findHelper(rootPageId, key, txn);
         return targetPageNode == null ? null : targetPageNode.getValue(key);
     }
 
@@ -311,7 +312,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      * @return
      */
     @SuppressWarnings("unchecked")
-    private BPlusTreeLeafPageNode<K, V> findHelper(int rootPageId, K key) {
+    private BPlusTreeLeafPageNode<K, V> findHelper(int rootPageId, K key, Transaction txn) {
         BPlusTreePageNode<K, V> root = (BPlusTreePageNode<K, V>) deserializePageNode(rootPageId);
         this.bufferManager.unpinPage(rootPageId, false);
 //        assert root != null;
@@ -320,14 +321,14 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
             else if (root.isLeafPageNode()) return ((BPlusTreeLeafPageNode<K, V>) root);
             else {
                 if (key.compareTo(root.getKeys().get(0)) < 0) {
-                    return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(0), key);
+                    return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(0), key, txn);
                 } else if (key.compareTo(root.getKeys().get(root.getKeys().size() - 1)) >= 0) {
-                    return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(((BPlusTreeInnerPageNode<K, V>) root).getChildren().size() - 1), key);
+                    return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(((BPlusTreeInnerPageNode<K, V>) root).getChildren().size() - 1), key, txn);
                 } else {
                     int i;
                     for (i = 1; i < root.getKeys().size(); i++) {
                         if (root.getKeys().get(i).compareTo(key) > 0)
-                            return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(i), key);
+                            return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(i), key, txn);
                     }
                     // TODO: bug in Binary Search
 //                    int start = 1, end = root.getKeys().size() - 2;
@@ -356,9 +357,9 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      *
      * @param key
      */
-    public void delete(K key) {
+    public void delete(K key, Transaction txn) {
         if (rootPageId != Config.INVALID_PAGE_ID) {
-            deleteHelper(rootPageId, key, -1);
+            deleteHelper(rootPageId, key, -1, txn);
         }
     }
 
@@ -369,7 +370,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      * @param keyIndex
      */
     @SuppressWarnings("unchecked")
-    private void deleteHelper(int rootPageId, K key, int keyIndex) {
+    private void deleteHelper(int rootPageId, K key, int keyIndex, Transaction txn) {
         Page rootPage = bufferManager.fetchPage(rootPageId);
         BPlusTreePageNode<K, V> root = (BPlusTreePageNode<K, V>) deserializePageNode(rootPage);
 
@@ -386,14 +387,14 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                 this.bufferManager.unpinPage(rootPageId, true);
             } else {
                 if (key.compareTo(root.getKeys().get(0)) < 0) {
-                    deleteHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(0), key, 0);
+                    deleteHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(0), key, 0, txn);
                 } else if (key.compareTo(root.getKeys().get(root.getKeys().size() - 1)) >= 0) {
-                    deleteHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(((BPlusTreeInnerPageNode<K, V>) root).getChildren().size() - 1), key, ((BPlusTreeInnerPageNode<K, V>) root).getChildren().size() - 1);
+                    deleteHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(((BPlusTreeInnerPageNode<K, V>) root).getChildren().size() - 1), key, ((BPlusTreeInnerPageNode<K, V>) root).getChildren().size() - 1, txn);
                 } else {
                     int i;
                     for (i = 1; i < root.getKeys().size(); i++) {
                         if (root.getKeys().get(i).compareTo(key) > 0) {
-                            deleteHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(i), key, i);
+                            deleteHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(i), key, i, txn);
                             break;
                         }
                     }
@@ -732,9 +733,9 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      * @return
      */
     @SuppressWarnings("unchecked")
-    public List<V> scanLeafNode(K key, boolean isLarger) {
+    public List<V> scanLeafNode(K key, boolean isLarger, Transaction txn) {
         ArrayList<V> res = new ArrayList<>();
-        BPlusTreeLeafPageNode<K, V> curLeafPageNode = findHelper(rootPageId, key);
+        BPlusTreeLeafPageNode<K, V> curLeafPageNode = findHelper(rootPageId, key, txn);
 
         if (curLeafPageNode != null) {
             int startIndex = curLeafPageNode.getValueIndex(key), curPageId = curLeafPageNode.getPageId();

@@ -5,9 +5,11 @@ import static org.junit.Assert.*;
 
 import txDB.Config;
 import txDB.buffer.BufferManager;
+import txDB.concurrency.LockManager;
+import txDB.concurrency.Transaction;
+import txDB.concurrency.TransactionManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.index.BPlusTreeIndex;
-import txDB.storage.index.InMemoryBPlusTreeIndex;
 import txDB.storage.page.BPlusTreeInnerPageNode;
 import txDB.storage.page.BPlusTreeLeafPageNode;
 import txDB.storage.page.BPlusTreePageNode;
@@ -24,6 +26,7 @@ import java.util.Collections;
 public class BPlusTreeIndexTest {
     String dbName = "test";
     DiskManager diskManager = new DiskManager();
+    TransactionManager transactionManager = new TransactionManager(null, null);
 
     public BPlusTreeIndexTest() throws IOException {
         diskManager.dropFile(dbName);
@@ -124,7 +127,8 @@ public class BPlusTreeIndexTest {
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
-        bpti.insert(3, 6);
+        Transaction txn0 = transactionManager.begin();
+        bpti.insert(3, 6, txn0);
 
         try {
             Page page0 = bufferManager.fetchPage(0);
@@ -151,12 +155,14 @@ public class BPlusTreeIndexTest {
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
-        bpti.insert(5, 100);
-        bpti.insert(9, 101);
-        bpti.insert(13, 102);
-        assertEquals(bpti.find(5), new Integer(100));
-        assertEquals(bpti.find(9), new Integer(101));
-        assertEquals(bpti.find(13), new Integer(102));
+        Transaction txn0 = transactionManager.begin();
+
+        bpti.insert(5, 100, txn0);
+        bpti.insert(9, 101, txn0);
+        bpti.insert(13, 102, txn0);
+        assertEquals(bpti.find(5, txn0), new Integer(100));
+        assertEquals(bpti.find(9, txn0), new Integer(101));
+        assertEquals(bpti.find(13, txn0), new Integer(102));
 
         diskManager.close();
 
@@ -169,20 +175,22 @@ public class BPlusTreeIndexTest {
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
-        bpti.insert(5, 100);
-        bpti.insert(9, 101);
-        bpti.insert(13, 102);
-        bpti.insert(20, 103);
-        assertEquals(bpti.find(5), new Integer(100));
-        assertEquals(bpti.find(9), new Integer(101));
-        assertEquals(bpti.find(13), new Integer(102));
-        assertEquals(bpti.find(20), new Integer(103));
+        Transaction txn0 = transactionManager.begin();
 
-        bpti.insert(1, 104);
-        assertEquals(bpti.find(1), new Integer(104));
+        bpti.insert(5, 100, txn0);
+        bpti.insert(9, 101, txn0);
+        bpti.insert(13, 102, txn0);
+        bpti.insert(20, 103, txn0);
+        assertEquals(bpti.find(5, txn0), new Integer(100));
+        assertEquals(bpti.find(9, txn0), new Integer(101));
+        assertEquals(bpti.find(13, txn0), new Integer(102));
+        assertEquals(bpti.find(20, txn0), new Integer(103));
 
-        bpti.insert(10, 105);
-        assertEquals(bpti.find(10), new Integer(105));
+        bpti.insert(1, 104, txn0);
+        assertEquals(bpti.find(1, txn0), new Integer(104));
+
+        bpti.insert(10, 105, txn0);
+        assertEquals(bpti.find(10, txn0), new Integer(105));
 
         diskManager.close();
 
@@ -196,53 +204,55 @@ public class BPlusTreeIndexTest {
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
-        bpti.insert(5, 100);
-        bpti.insert(9, 101);
-        bpti.insert(13, 102);
-        bpti.insert(20, 103);
-        assertEquals(bpti.find(5), new Integer(100));
-        assertEquals(bpti.find(9), new Integer(101));
-        assertEquals(bpti.find(13), new Integer(102));
-        assertEquals(bpti.find(20), new Integer(103));
+        Transaction txn0 = transactionManager.begin();
 
-        bpti.insert(16, 104);
-        assertEquals(bpti.find(16), new Integer(104));
+        bpti.insert(5, 100, txn0);
+        bpti.insert(9, 101, txn0);
+        bpti.insert(13, 102, txn0);
+        bpti.insert(20, 103, txn0);
+        assertEquals(bpti.find(5, txn0), new Integer(100));
+        assertEquals(bpti.find(9, txn0), new Integer(101));
+        assertEquals(bpti.find(13, txn0), new Integer(102));
+        assertEquals(bpti.find(20, txn0), new Integer(103));
 
-        bpti.insert(50, 105);
-        assertEquals(bpti.find(50), new Integer(105));
+        bpti.insert(16, 104, txn0);
+        assertEquals(bpti.find(16, txn0), new Integer(104));
 
-        bpti.insert(1, 106);
-        assertEquals(bpti.find(1), new Integer(106));
+        bpti.insert(50, 105, txn0);
+        assertEquals(bpti.find(50, txn0), new Integer(105));
 
-        bpti.insert(80, 107);
-        assertEquals(bpti.find(80), new Integer(107));
+        bpti.insert(1, 106, txn0);
+        assertEquals(bpti.find(1, txn0), new Integer(106));
 
-        bpti.insert(8, 108);
-        assertEquals(bpti.find(8), new Integer(108));
+        bpti.insert(80, 107, txn0);
+        assertEquals(bpti.find(80, txn0), new Integer(107));
 
-        bpti.insert(12, 109);
-        assertEquals(bpti.find(12), new Integer(109));
+        bpti.insert(8, 108, txn0);
+        assertEquals(bpti.find(8, txn0), new Integer(108));
 
-        bpti.insert(11, 110);
-        assertEquals(bpti.find(11), new Integer(110));
+        bpti.insert(12, 109, txn0);
+        assertEquals(bpti.find(12, txn0), new Integer(109));
 
-        bpti.insert(17, 111);
-        assertEquals(bpti.find(17), new Integer(111));
+        bpti.insert(11, 110, txn0);
+        assertEquals(bpti.find(11, txn0), new Integer(110));
 
-        bpti.insert(18, 112);
-        assertEquals(bpti.find(18), new Integer(112));
+        bpti.insert(17, 111, txn0);
+        assertEquals(bpti.find(17, txn0), new Integer(111));
 
-        bpti.insert(14, 113);
-        assertEquals(bpti.find(14), new Integer(113));
+        bpti.insert(18, 112, txn0);
+        assertEquals(bpti.find(18, txn0), new Integer(112));
 
-        bpti.insert(15, 114);
-        assertEquals(bpti.find(15), new Integer(114));
+        bpti.insert(14, 113, txn0);
+        assertEquals(bpti.find(14, txn0), new Integer(113));
 
-        bpti.insert(120, 115);
-        assertEquals(bpti.find(120), new Integer(115));
+        bpti.insert(15, 114, txn0);
+        assertEquals(bpti.find(15, txn0), new Integer(114));
 
-        bpti.insert(100, 116);
-        assertEquals(bpti.find(100), new Integer(116));
+        bpti.insert(120, 115, txn0);
+        assertEquals(bpti.find(120, txn0), new Integer(115));
+
+        bpti.insert(100, 116, txn0);
+        assertEquals(bpti.find(100, txn0), new Integer(116));
 
         bpti.traverseAllNodes();
 
@@ -259,16 +269,17 @@ public class BPlusTreeIndexTest {
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100, 100);
+        Transaction txn0 = transactionManager.begin();
 
         int max = 1000, i;
         for(i = 0; i < max; i++) {
-            bpti.insert(i, i);
-            assertEquals(bpti.find(i), new Integer(i));
+            bpti.insert(i, i, txn0);
+            assertEquals(bpti.find(i, txn0), new Integer(i));
         }
 
         for(i = 0; i < max; i++) {
 //            bpti.insert(i, i);
-            assertEquals(bpti.find(i), new Integer(i));
+            assertEquals(bpti.find(i, txn0), new Integer(i));
         }
     }
 
@@ -278,16 +289,17 @@ public class BPlusTreeIndexTest {
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100, 100);
+        Transaction txn0 = transactionManager.begin();
 
         int max = 100000, i;
         for(i = 0; i < max; i++) {
-            bpti.insert(i, i);
+            bpti.insert(i, i, txn0);
         }
 
         bufferManager.flushAllPages();
 
         for(i = 0; i < max; i++) {
-            assertEquals(bpti.find(i), new Integer(i));
+            assertEquals(bpti.find(i, txn0), new Integer(i));
         }
     }
 
@@ -297,54 +309,55 @@ public class BPlusTreeIndexTest {
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
+        Transaction txn0 = transactionManager.begin();
 
-        bpti.insert(5, 100);
-        bpti.insert(9, 101);
-        bpti.insert(13, 102);
-        bpti.insert(20, 103);
-        assertEquals(bpti.find(5), new Integer(100));
-        assertEquals(bpti.find(9), new Integer(101));
-        assertEquals(bpti.find(13), new Integer(102));
-        assertEquals(bpti.find(20), new Integer(103));
+        bpti.insert(5, 100, txn0);
+        bpti.insert(9, 101, txn0);
+        bpti.insert(13, 102, txn0);
+        bpti.insert(20, 103, txn0);
+        assertEquals(bpti.find(5, txn0), new Integer(100));
+        assertEquals(bpti.find(9, txn0), new Integer(101));
+        assertEquals(bpti.find(13, txn0), new Integer(102));
+        assertEquals(bpti.find(20, txn0), new Integer(103));
 
-        bpti.insert(16, 104);
-        assertEquals(bpti.find(16), new Integer(104));
+        bpti.insert(16, 104, txn0);
+        assertEquals(bpti.find(16, txn0), new Integer(104));
 
-        bpti.insert(50, 105);
-        assertEquals(bpti.find(50), new Integer(105));
+        bpti.insert(50, 105, txn0);
+        assertEquals(bpti.find(50, txn0), new Integer(105));
 
-        bpti.insert(1, 106);
-        assertEquals(bpti.find(1), new Integer(106));
+        bpti.insert(1, 106, txn0);
+        assertEquals(bpti.find(1, txn0), new Integer(106));
 
-        bpti.insert(80, 107);
-        assertEquals(bpti.find(80), new Integer(107));
+        bpti.insert(80, 107, txn0);
+        assertEquals(bpti.find(80, txn0), new Integer(107));
 
-        bpti.insert(8, 108);
-        assertEquals(bpti.find(8), new Integer(108));
+        bpti.insert(8, 108, txn0);
+        assertEquals(bpti.find(8, txn0), new Integer(108));
 
-        bpti.insert(12, 109);
-        assertEquals(bpti.find(12), new Integer(109));
+        bpti.insert(12, 109, txn0);
+        assertEquals(bpti.find(12, txn0), new Integer(109));
 
-        bpti.insert(11, 110);
-        assertEquals(bpti.find(11), new Integer(110));
+        bpti.insert(11, 110, txn0);
+        assertEquals(bpti.find(11, txn0), new Integer(110));
 
-        bpti.insert(17, 111);
-        assertEquals(bpti.find(17), new Integer(111));
+        bpti.insert(17, 111, txn0);
+        assertEquals(bpti.find(17, txn0), new Integer(111));
 
-        bpti.insert(18, 112);
-        assertEquals(bpti.find(18), new Integer(112));
+        bpti.insert(18, 112, txn0);
+        assertEquals(bpti.find(18, txn0), new Integer(112));
 
-        bpti.insert(14, 113);
-        assertEquals(bpti.find(14), new Integer(113));
+        bpti.insert(14, 113, txn0);
+        assertEquals(bpti.find(14, txn0), new Integer(113));
 
-        bpti.insert(15, 114);
-        assertEquals(bpti.find(15), new Integer(114));
+        bpti.insert(15, 114, txn0);
+        assertEquals(bpti.find(15, txn0), new Integer(114));
 
-        bpti.insert(120, 115);
-        assertEquals(bpti.find(120), new Integer(115));
+        bpti.insert(120, 115, txn0);
+        assertEquals(bpti.find(120, txn0), new Integer(115));
 
-        bpti.insert(100, 116);
-        assertEquals(bpti.find(100), new Integer(116));
+        bpti.insert(100, 116, txn0);
+        assertEquals(bpti.find(100, txn0), new Integer(116));
 
 //        bpti.traverseLeafNodes(120);
     }
@@ -355,31 +368,32 @@ public class BPlusTreeIndexTest {
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
+        Transaction txn0 = transactionManager.begin();
 
-        bpti.insert(5, 100);
-        bpti.insert(9, 101);
-        bpti.insert(13, 102);
-        bpti.insert(20, 103);
-        bpti.insert(30, 104);
-        assertEquals(bpti.find(5), new Integer(100));
-        assertEquals(bpti.find(9), new Integer(101));
-        assertEquals(bpti.find(13), new Integer(102));
-        assertEquals(bpti.find(20), new Integer(103));
-        assertEquals(bpti.find(30), new Integer(104));
+        bpti.insert(5, 100, txn0);
+        bpti.insert(9, 101, txn0);
+        bpti.insert(13, 102, txn0);
+        bpti.insert(20, 103, txn0);
+        bpti.insert(30, 104, txn0);
+        assertEquals(bpti.find(5, txn0), new Integer(100));
+        assertEquals(bpti.find(9, txn0), new Integer(101));
+        assertEquals(bpti.find(13, txn0), new Integer(102));
+        assertEquals(bpti.find(20, txn0), new Integer(103));
+        assertEquals(bpti.find(30, txn0), new Integer(104));
 
 //        bpti.traverseLeafNodes();
 
-        bpti.delete(13);
-        assertNull(bpti.find(13));
+        bpti.delete(13, txn0);
+        assertNull(bpti.find(13, txn0));
 //        bpti.traverseAllNodes();
 
-        bpti.delete(20);
-        assertNull(bpti.find(20));
+        bpti.delete(20, txn0);
+        assertNull(bpti.find(20, txn0));
 //        bpti.traverseAllNodes();
 
-        assertEquals(bpti.find(5), new Integer(100));
-        assertEquals(bpti.find(9), new Integer(101));
-        assertEquals(bpti.find(30), new Integer(104));
+        assertEquals(bpti.find(5, txn0), new Integer(100));
+        assertEquals(bpti.find(9, txn0), new Integer(101));
+        assertEquals(bpti.find(30, txn0), new Integer(104));
 
         bpti.traverseLeafNodes();
     }
@@ -390,18 +404,19 @@ public class BPlusTreeIndexTest {
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 200, 200);
+        Transaction txn0 = transactionManager.begin();
 
         int max = 100000, i;
         for(i = 0; i < max; i++) {
-            bpti.insert(i, i);
+            bpti.insert(i, i, txn0);
 //            assertEquals(bpti.find(i), new Integer(i));
         }
 
         for(i = 0; i < max; i++) {
-            bpti.delete(i);
-            assertNull(bpti.find(i));
+            bpti.delete(i, txn0);
+            assertNull(bpti.find(i, txn0));
             if (i < max - 1)
-                assertEquals(bpti.find(i + 1), new Integer(i + 1));
+                assertEquals(bpti.find(i + 1, txn0), new Integer(i + 1));
         }
     }
 
@@ -412,20 +427,21 @@ public class BPlusTreeIndexTest {
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 144, 144);
+        Transaction txn0 = transactionManager.begin();
 
         int max = 100000, i;
         for(i = 0; i < max; i++) {
-            bpti.insert(i, i);
+            bpti.insert(i, i, txn0);
         }
 
-        ArrayList<Integer> res = new ArrayList<>(bpti.scanLeafNode(0, true));
+        ArrayList<Integer> res = new ArrayList<>(bpti.scanLeafNode(0, true, txn0));
         i = 0;
         for (Integer value : res) {
             assertEquals(value, new Integer(i));
             i++;
         }
 
-        res = new ArrayList<>(bpti.scanLeafNode(max, false));
+        res = new ArrayList<>(bpti.scanLeafNode(max, false, txn0));
         Collections.reverse(res);
         i = 0;
         for (Integer value : res) {
@@ -433,7 +449,7 @@ public class BPlusTreeIndexTest {
             i++;
         }
 
-        res = new ArrayList<>(bpti.scanLeafNode(50000, true));
+        res = new ArrayList<>(bpti.scanLeafNode(50000, true, txn0));
         i = 50000;
         for (Integer value : res) {
             assertEquals(value, new Integer(i));

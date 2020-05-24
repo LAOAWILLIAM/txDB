@@ -3,6 +3,8 @@ package test.storage.table;
 import org.junit.Test;
 import txDB.Config;
 import txDB.buffer.BufferManager;
+import txDB.concurrency.Transaction;
+import txDB.concurrency.TransactionManager;
 import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.index.BPlusTreeIndex;
@@ -24,6 +26,7 @@ public class TableTest {
     // TODO
     String dbName = "test";
     DiskManager diskManager = new DiskManager();
+    TransactionManager transactionManager = new TransactionManager(null, null);
 
     public TableTest() throws IOException {
 //        diskManager.dropFile(dbName);
@@ -355,6 +358,7 @@ public class TableTest {
     public void getTupleWithIndexTest() throws IOException, ClassNotFoundException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
         assertNotNull(page0);
@@ -414,7 +418,7 @@ public class TableTest {
             values.add(i * 3 + 3);
             tuple = new Tuple(values, scheme);
             assertTrue(table.insertTuple(tuple, recordID, null));
-            bpti.insert(column0, recordID);
+            bpti.insert(column0, recordID, txn0);
 //            bpti.insert(column0, recordID1);
 //            assertEquals(bpti.find(column0).getPageId(), 6);
 //            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
@@ -450,7 +454,7 @@ public class TableTest {
             bpti = new BPlusTreeIndex<>(bufferManager, metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 144, 177);
             for (i = 0; i < 100000; i++) {
 //                System.out.println(i);
-                assertEquals(table.getTuple(bpti.find(i * 3 + 1), null).getValue(scheme, 1), new Integer(i * 3 + 2));
+                assertEquals(table.getTuple(bpti.find(i * 3 + 1, txn0), null).getValue(scheme, 1), new Integer(i * 3 + 2));
             }
 //            assertEquals(table.getTuple(bpti.find(3001), null).getValue(scheme, 1), new Integer(3002));
 //            assertEquals(table.getTuple(bpti.find(18001), null).getValue(scheme, 1), new Integer(18002));

@@ -45,100 +45,104 @@ public class InMemoryBPlusTreeIndexTest {
     @Test
     public void rootAsLeafNodeTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
-        assertNull(bpt.find(5, null));
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
+        assertNull(bpt.find(5, txn0));
 
-        bpt.insert(5, 100, null);
-        bpt.insert(9, 101, null);
-        assertEquals(bpt.find(5, null), new Integer(100));
-        assertEquals(bpt.find(9, null), new Integer(101));
+        bpt.insert(5, 100, txn0);
+        bpt.insert(9, 101, txn0);
+        assertEquals(bpt.find(5, txn0), new Integer(100));
+        assertEquals(bpt.find(9, txn0), new Integer(101));
     }
 
     @Test
     public void rootAsLeafNodeFirstSplitTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
-        assertNull(bpt.find(5, null));
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
+        assertNull(bpt.find(5, txn0));
 
-        bpt.insert(5, 100, null);
-        bpt.insert(9, 101, null);
-        bpt.insert(13, 102, null);
-        assertEquals(bpt.find(5, null), new Integer(100));
-        assertEquals(bpt.find(9, null), new Integer(101));
-        assertEquals(bpt.find(13, null), new Integer(102));
+        bpt.insert(5, 100, txn0);
+        bpt.insert(9, 101, txn0);
+        bpt.insert(13, 102, txn0);
+        assertEquals(bpt.find(5, txn0), new Integer(100));
+        assertEquals(bpt.find(9, txn0), new Integer(101));
+        assertEquals(bpt.find(13, txn0), new Integer(102));
     }
 
     @Test
     public void rootAsLeafNodeFirstSplitAndInsertTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
-        assertNull(bpt.find(5, null));
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
+        assertNull(bpt.find(5, txn0));
 
-        bpt.insert(5, 100, null);
-        bpt.insert(9, 101, null);
-        bpt.insert(13, 102, null);
-        bpt.insert(20, 103, null);
-        assertEquals(bpt.find(5, null), new Integer(100));
-        assertEquals(bpt.find(9, null), new Integer(101));
-        assertEquals(bpt.find(13, null), new Integer(102));
-        assertEquals(bpt.find(20, null), new Integer(103));
+        bpt.insert(5, 100, txn0);
+        bpt.insert(9, 101, txn0);
+        bpt.insert(13, 102, txn0);
+        bpt.insert(20, 103, txn0);
+        assertEquals(bpt.find(5, txn0), new Integer(100));
+        assertEquals(bpt.find(9, txn0), new Integer(101));
+        assertEquals(bpt.find(13, txn0), new Integer(102));
+        assertEquals(bpt.find(20, txn0), new Integer(103));
 
-        bpt.insert(1, 104, null);
-        assertEquals(bpt.find(1, null), new Integer(104));
+        bpt.insert(1, 104, txn0);
+        assertEquals(bpt.find(1, txn0), new Integer(104));
 
-        bpt.insert(10, 105, null);
-        assertEquals(bpt.find(10, null), new Integer(105));
+        bpt.insert(10, 105, txn0);
+        assertEquals(bpt.find(10, txn0), new Integer(105));
     }
 
     @Test
     public void internalNodeSplitTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
-        assertNull(bpt.find(5, null));
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
+        assertNull(bpt.find(5, txn0));
 
-        bpt.insert(5, 100, null);
-        bpt.insert(9, 101, null);
-        bpt.insert(13, 102, null);
-        bpt.insert(20, 103, null);
-        assertEquals(bpt.find(5, null), new Integer(100));
-        assertEquals(bpt.find(9, null), new Integer(101));
-        assertEquals(bpt.find(13, null), new Integer(102));
-        assertEquals(bpt.find(20, null), new Integer(103));
+        bpt.insert(5, 100, txn0);
+        bpt.insert(9, 101, txn0);
+        bpt.insert(13, 102, txn0);
+        bpt.insert(20, 103, txn0);
+        assertEquals(bpt.find(5, txn0), new Integer(100));
+        assertEquals(bpt.find(9, txn0), new Integer(101));
+        assertEquals(bpt.find(13, txn0), new Integer(102));
+        assertEquals(bpt.find(20, txn0), new Integer(103));
 
-        bpt.insert(16, 104, null);
-        assertEquals(bpt.find(16, null), new Integer(104));
+        bpt.insert(16, 104, txn0);
+        assertEquals(bpt.find(16, txn0), new Integer(104));
 
-        bpt.insert(50, 105, null);
-        assertEquals(bpt.find(50, null), new Integer(105));
+        bpt.insert(50, 105, txn0);
+        assertEquals(bpt.find(50, txn0), new Integer(105));
 
-        bpt.insert(1, 106, null);
-        assertEquals(bpt.find(1, null), new Integer(106));
+        bpt.insert(1, 106, txn0);
+        assertEquals(bpt.find(1, txn0), new Integer(106));
 
-        bpt.insert(80, 107, null);
-        assertEquals(bpt.find(80, null), new Integer(107));
+        bpt.insert(80, 107, txn0);
+        assertEquals(bpt.find(80, txn0), new Integer(107));
 
-        bpt.insert(8, 108, null);
-        assertEquals(bpt.find(8, null), new Integer(108));
+        bpt.insert(8, 108, txn0);
+        assertEquals(bpt.find(8, txn0), new Integer(108));
 
-        bpt.insert(12, 109, null);
-        assertEquals(bpt.find(12, null), new Integer(109));
+        bpt.insert(12, 109, txn0);
+        assertEquals(bpt.find(12, txn0), new Integer(109));
 
-        bpt.insert(11, 110, null);
-        assertEquals(bpt.find(11, null), new Integer(110));
+        bpt.insert(11, 110, txn0);
+        assertEquals(bpt.find(11, txn0), new Integer(110));
 
-        bpt.insert(17, 111, null);
-        assertEquals(bpt.find(17, null), new Integer(111));
+        bpt.insert(17, 111, txn0);
+        assertEquals(bpt.find(17, txn0), new Integer(111));
 
-        bpt.insert(18, 112, null);
-        assertEquals(bpt.find(18, null), new Integer(112));
+        bpt.insert(18, 112, txn0);
+        assertEquals(bpt.find(18, txn0), new Integer(112));
 
-        bpt.insert(14, 113, null);
-        assertEquals(bpt.find(14, null), new Integer(113));
+        bpt.insert(14, 113, txn0);
+        assertEquals(bpt.find(14, txn0), new Integer(113));
 
-        bpt.insert(15, 114, null);
-        assertEquals(bpt.find(15, null), new Integer(114));
+        bpt.insert(15, 114, txn0);
+        assertEquals(bpt.find(15, txn0), new Integer(114));
 
-        bpt.insert(120, 115, null);
-        assertEquals(bpt.find(120, null), new Integer(115));
+        bpt.insert(120, 115, txn0);
+        assertEquals(bpt.find(120, txn0), new Integer(115));
 
-        bpt.insert(100, 116, null);
-        assertEquals(bpt.find(100, null), new Integer(116));
+        bpt.insert(100, 116, txn0);
+        assertEquals(bpt.find(100, txn0), new Integer(116));
 
         bpt.traverseAllNodes();
     }
@@ -146,16 +150,17 @@ public class InMemoryBPlusTreeIndexTest {
     @Test
     public void insertScaleTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(10);
-        assertNull(bpt.find(5, null));
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
+        assertNull(bpt.find(5, txn0));
 
         int max = 10000000, i;
         for(i = 0; i < max; i++) {
-            bpt.insert(i, i, null);
-//            assertEquals(bpt.find(i, null), new Integer(i));
+            bpt.insert(i, i, txn0);
+//            assertEquals(bpt.find(i, txn0), new Integer(i));
         }
 
         for(i = 0; i < max; i++) {
-            assertEquals(bpt.find(i, null), new Integer(i));
+            assertEquals(bpt.find(i, txn0), new Integer(i));
         }
 
 //        bpt.traverseAllNodes();
@@ -164,55 +169,56 @@ public class InMemoryBPlusTreeIndexTest {
     @Test
     public void traverseLeafNodesTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
-        assertNull(bpt.find(5, null));
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
+        assertNull(bpt.find(5, txn0));
 
-        bpt.insert(5, 100, null);
-        bpt.insert(9, 101, null);
-        bpt.insert(13, 102, null);
-        bpt.insert(20, 103, null);
-        assertEquals(bpt.find(5, null), new Integer(100));
-        assertEquals(bpt.find(9, null), new Integer(101));
-        assertEquals(bpt.find(13, null), new Integer(102));
-        assertEquals(bpt.find(20, null), new Integer(103));
+        bpt.insert(5, 100, txn0);
+        bpt.insert(9, 101, txn0);
+        bpt.insert(13, 102, txn0);
+        bpt.insert(20, 103, txn0);
+        assertEquals(bpt.find(5, txn0), new Integer(100));
+        assertEquals(bpt.find(9, txn0), new Integer(101));
+        assertEquals(bpt.find(13, txn0), new Integer(102));
+        assertEquals(bpt.find(20, txn0), new Integer(103));
 
-        bpt.insert(16, 104, null);
-        assertEquals(bpt.find(16, null), new Integer(104));
+        bpt.insert(16, 104, txn0);
+        assertEquals(bpt.find(16, txn0), new Integer(104));
 
-        bpt.insert(50, 105, null);
-        assertEquals(bpt.find(50, null), new Integer(105));
+        bpt.insert(50, 105, txn0);
+        assertEquals(bpt.find(50, txn0), new Integer(105));
 
-        bpt.insert(1, 106, null);
-        assertEquals(bpt.find(1, null), new Integer(106));
+        bpt.insert(1, 106, txn0);
+        assertEquals(bpt.find(1, txn0), new Integer(106));
 
-        bpt.insert(80, 107, null);
-        assertEquals(bpt.find(80, null), new Integer(107));
+        bpt.insert(80, 107, txn0);
+        assertEquals(bpt.find(80, txn0), new Integer(107));
 
-        bpt.insert(8, 108, null);
-        assertEquals(bpt.find(8, null), new Integer(108));
+        bpt.insert(8, 108, txn0);
+        assertEquals(bpt.find(8, txn0), new Integer(108));
 
-        bpt.insert(12, 109, null);
-        assertEquals(bpt.find(12, null), new Integer(109));
+        bpt.insert(12, 109, txn0);
+        assertEquals(bpt.find(12, txn0), new Integer(109));
 
-        bpt.insert(11, 110, null);
-        assertEquals(bpt.find(11, null), new Integer(110));
+        bpt.insert(11, 110, txn0);
+        assertEquals(bpt.find(11, txn0), new Integer(110));
 
-        bpt.insert(17, 111, null);
-        assertEquals(bpt.find(17, null), new Integer(111));
+        bpt.insert(17, 111, txn0);
+        assertEquals(bpt.find(17, txn0), new Integer(111));
 
-        bpt.insert(18, 112, null);
-        assertEquals(bpt.find(18, null), new Integer(112));
+        bpt.insert(18, 112, txn0);
+        assertEquals(bpt.find(18, txn0), new Integer(112));
 
-        bpt.insert(14, 113, null);
-        assertEquals(bpt.find(14, null), new Integer(113));
+        bpt.insert(14, 113, txn0);
+        assertEquals(bpt.find(14, txn0), new Integer(113));
 
-        bpt.insert(15, 114, null);
-        assertEquals(bpt.find(15, null), new Integer(114));
+        bpt.insert(15, 114, txn0);
+        assertEquals(bpt.find(15, txn0), new Integer(114));
 
-        bpt.insert(120, 115, null);
-        assertEquals(bpt.find(120, null), new Integer(115));
+        bpt.insert(120, 115, txn0);
+        assertEquals(bpt.find(120, txn0), new Integer(115));
 
-        bpt.insert(100, 116, null);
-        assertEquals(bpt.find(100, null), new Integer(116));
+        bpt.insert(100, 116, txn0);
+        assertEquals(bpt.find(100, txn0), new Integer(116));
 
         bpt.traverseLeafNodes();
     }
@@ -220,53 +226,55 @@ public class InMemoryBPlusTreeIndexTest {
     @Test
     public void deleteWithoutRedistributeAndMergeTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(5);
-        assertNull(bpt.find(5, null));
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
+        assertNull(bpt.find(5, txn0));
 
-        bpt.insert(5, 100, null);
-        bpt.insert(9, 101, null);
-        bpt.insert(13, 102, null);
-        bpt.insert(20, 103, null);
-        bpt.insert(30, 104, null);
-        assertEquals(bpt.find(5, null), new Integer(100));
-        assertEquals(bpt.find(9, null), new Integer(101));
-        assertEquals(bpt.find(13, null), new Integer(102));
-        assertEquals(bpt.find(20, null), new Integer(103));
-        assertEquals(bpt.find(30, null), new Integer(104));
+        bpt.insert(5, 100, txn0);
+        bpt.insert(9, 101, txn0);
+        bpt.insert(13, 102, txn0);
+        bpt.insert(20, 103, txn0);
+        bpt.insert(30, 104, txn0);
+        assertEquals(bpt.find(5, txn0), new Integer(100));
+        assertEquals(bpt.find(9, txn0), new Integer(101));
+        assertEquals(bpt.find(13, txn0), new Integer(102));
+        assertEquals(bpt.find(20, txn0), new Integer(103));
+        assertEquals(bpt.find(30, txn0), new Integer(104));
 
-        bpt.delete(13);
-        assertNull(bpt.find(13, null));
+        bpt.delete(13, txn0);
+        assertNull(bpt.find(13, txn0));
 
-        assertEquals(bpt.find(20, null), new Integer(103));
+        assertEquals(bpt.find(20, txn0), new Integer(103));
     }
 
     @Test
     public void deleteWithRedistributeAndMergeTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(3);
-        assertNull(bpt.find(5, null));
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
+        assertNull(bpt.find(5, txn0));
 
-        bpt.insert(5, 100, null);
-        bpt.insert(9, 101, null);
-        bpt.insert(13, 102, null);
-        bpt.insert(20, 103, null);
-        bpt.insert(30, 104, null);
-        assertEquals(bpt.find(5, null), new Integer(100));
-        assertEquals(bpt.find(9, null), new Integer(101));
-        assertEquals(bpt.find(13, null), new Integer(102));
-        assertEquals(bpt.find(20, null), new Integer(103));
-        assertEquals(bpt.find(30, null), new Integer(104));
+        bpt.insert(5, 100, txn0);
+        bpt.insert(9, 101, txn0);
+        bpt.insert(13, 102, txn0);
+        bpt.insert(20, 103, txn0);
+        bpt.insert(30, 104, txn0);
+        assertEquals(bpt.find(5, txn0), new Integer(100));
+        assertEquals(bpt.find(9, txn0), new Integer(101));
+        assertEquals(bpt.find(13, txn0), new Integer(102));
+        assertEquals(bpt.find(20, txn0), new Integer(103));
+        assertEquals(bpt.find(30, txn0), new Integer(104));
 
 //        bpt.traverseAllNodes();
 
-        bpt.delete(13);
-        assertNull(bpt.find(13, null));
+        bpt.delete(13, txn0);
+        assertNull(bpt.find(13, txn0));
         bpt.traverseAllNodes();
 
-        bpt.delete(20);
-        assertNull(bpt.find(20, null));
+        bpt.delete(20, txn0);
+        assertNull(bpt.find(20, txn0));
 
-        assertEquals(bpt.find(5, null), new Integer(100));
-        assertEquals(bpt.find(9, null), new Integer(101));
-        assertEquals(bpt.find(30, null), new Integer(104));
+        assertEquals(bpt.find(5, txn0), new Integer(100));
+        assertEquals(bpt.find(9, txn0), new Integer(101));
+        assertEquals(bpt.find(30, txn0), new Integer(104));
 
 //        bpt.traverseLeafNodes();
     }
@@ -274,17 +282,18 @@ public class InMemoryBPlusTreeIndexTest {
     @Test
     public void deleteScaleTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(300);
-        assertNull(bpt.find(5, null));
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
+        assertNull(bpt.find(5, txn0));
 
         int max = 1000000, i;
         for(i = 0; i < max; i++) {
-            bpt.insert(i, i, null);
-//            assertEquals(bpt.find(i, null), new Integer(i));
+            bpt.insert(i, i, txn0);
+//            assertEquals(bpt.find(i, txn0), new Integer(i));
         }
 
         for(i = 0; i < max; i++) {
-            bpt.delete(i);
-            assertNull(bpt.find(i, null));
+            bpt.delete(i, txn0);
+            assertNull(bpt.find(i, txn0));
 //            bpt.traverseAllNodes();
 //            System.out.println();
 //            if (i < max - 1)
@@ -295,20 +304,21 @@ public class InMemoryBPlusTreeIndexTest {
     @Test
     public void scanLeafNodeTest() {
         InMemoryBPlusTreeIndex<Integer, Integer> bpt = new InMemoryBPlusTreeIndex<>(300);
+        InMemoryBPlusTreeIndex<Integer, Integer>.Transaction txn0 = bpt.getTransactionManager().begin();
 
         int max = 10000000, i;
         for(i = 0; i < max; i++) {
-            bpt.insert(i, i, null);
+            bpt.insert(i, i, txn0);
         }
 
-        ArrayList<Integer> res = new ArrayList<>(bpt.scanLeafNode(0, true, null));
+        ArrayList<Integer> res = new ArrayList<>(bpt.scanLeafNode(0, true, txn0));
         i = 0;
         for (Integer value : res) {
             assertEquals(value, new Integer(i));
             i++;
         }
 
-        res = new ArrayList<>(bpt.scanLeafNode(max, false, null));
+        res = new ArrayList<>(bpt.scanLeafNode(max, false, txn0));
         Collections.reverse(res);
         i = 0;
         for (Integer value : res) {
@@ -316,7 +326,7 @@ public class InMemoryBPlusTreeIndexTest {
             i++;
         }
 
-        res = new ArrayList<>(bpt.scanLeafNode(5000000, true, null));
+        res = new ArrayList<>(bpt.scanLeafNode(5000000, true, txn0));
         i = 5000000;
         for (Integer value : res) {
             assertEquals(value, new Integer(i));

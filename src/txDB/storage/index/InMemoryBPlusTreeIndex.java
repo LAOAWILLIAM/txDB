@@ -529,9 +529,9 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
      *
      * @param key
      */
-    public void delete(K key) {
+    public void delete(K key, Transaction txn) {
         if (root != null) {
-            deleteHelper(root, key, -1);
+            deleteHelper(root, key, -1, txn);
         }
     }
 
@@ -541,7 +541,7 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
      * @param key
      * @param keyIndex
      */
-    private void deleteHelper(Node<K, V> root, K key, int keyIndex) {
+    private void deleteHelper(Node<K, V> root, K key, int keyIndex, Transaction txn) {
         if (root.isLeafNode) {
 //            System.out.println("key: " + key);
             ((LeafNode<K, V>) root).remove(key);
@@ -552,14 +552,14 @@ public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
             }
         } else {
             if (key.compareTo(root.keys.get(0)) < 0) {
-                deleteHelper(((InnerNode<K, V>) root).children.get(0), key, 0);
+                deleteHelper(((InnerNode<K, V>) root).children.get(0), key, 0, txn);
             } else if (key.compareTo(root.keys.get(root.keys.size() - 1)) >= 0) {
-                deleteHelper(((InnerNode<K, V>) root).children.get(((InnerNode<K, V>) root).children.size() - 1), key, ((InnerNode<K, V>) root).children.size() - 1);
+                deleteHelper(((InnerNode<K, V>) root).children.get(((InnerNode<K, V>) root).children.size() - 1), key, ((InnerNode<K, V>) root).children.size() - 1, txn);
             } else {
                 int i;
                 for (i = 1; i < root.keys.size(); i++) {
                     if (((InnerNode<K, V>) root).keys.get(i).compareTo(key) > 0) {
-                        deleteHelper(((InnerNode<K, V>) root).children.get(i), key, i);
+                        deleteHelper(((InnerNode<K, V>) root).children.get(i), key, i, txn);
                         break;
                     }
                 }
