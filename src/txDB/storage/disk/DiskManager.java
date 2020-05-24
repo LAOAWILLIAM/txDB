@@ -24,7 +24,7 @@ public class DiskManager {
         File dbFile = new File(dbFilePath);
         File logFile = new File(logFilePath);
 
-        boolean res1 = true, res2 = true;
+        boolean res1 = false, res2 = false;
         if (!dbFile.exists() || !dbFile.isFile()) {
             res1 = dbFile.createNewFile();
             res2 = logFile.createNewFile();
@@ -76,9 +76,9 @@ public class DiskManager {
         this.nextPageId = new AtomicInteger((int) (dbFile.length() / Config.PAGE_SIZE));
 
         try {
-            this.dbFileWrite = new FileOutputStream(dbFilePath);
+            this.dbFileWrite = new FileOutputStream(dbFilePath, true);
             this.dbFileRead = new FileInputStream(dbFilePath);
-            this.logFileWrite = new FileOutputStream(logFilePath);
+            this.logFileWrite = new FileOutputStream(logFilePath, true);
             this.logFileRead = new FileInputStream(logFilePath);
         } catch (FileNotFoundException e) {
             e.printStackTrace();

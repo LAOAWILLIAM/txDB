@@ -26,7 +26,7 @@ public class TableTest {
     DiskManager diskManager = new DiskManager();
 
     public TableTest() throws IOException {
-        diskManager.dropFile(dbName);
+//        diskManager.dropFile(dbName);
         diskManager.createFile(dbName);
         diskManager.useFile(dbName);
     }
@@ -247,7 +247,7 @@ public class TableTest {
         ArrayList<Object> values = new ArrayList<>();
         Tuple tuple, res;
         int i;
-        for (i = 0; i < 700; i++) {
+        for (i = 0; i < 10000; i++) {
             values.clear();
             values.add(i * 3 + 1);
             values.add(i * 3 + 2);
@@ -276,7 +276,7 @@ public class TableTest {
             assertEquals(metaDataPage.getRelationMetaData(relationName).getRelationName(), "table0");
 
             table = new Table(bufferManager, null, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
-            for (i = 0; i < 700; i++) {
+            for (i = 0; i < 10000; i++) {
                 recordID = new RecordID((i / 203) + 1, i % 203);
                 res = table.getTuple(recordID, null);
                 assertNotNull(res);
@@ -288,7 +288,66 @@ public class TableTest {
             e.printStackTrace();
         } finally {
             diskManager.close();
-            diskManager.dropFile(dbName);
+//            diskManager.dropFile(dbName);
+        }
+    }
+
+    /**
+     * Require a written file exists
+     */
+    @Test
+    public void tablePersistTest() {
+        int bufferSize = 3;
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+
+        Page page0 = bufferManager.fetchPage(0);
+        String relationName = "table0";
+        RecordID recordID;
+
+        try {
+            ByteArrayInputStream bis = new ByteArrayInputStream(page0.getPageData());
+            ObjectInputStream in = new ObjectInputStream(bis);
+            MetaDataPage metaDataPage = (MetaDataPage) in.readObject();
+            assertEquals(metaDataPage.getRelationMetaData(relationName).getRootRelationPageId(), 1);
+            assertEquals(metaDataPage.getRelationMetaData(relationName).getRelationName(), "table0");
+            Scheme scheme = metaDataPage.getRelationMetaData(relationName).getScheme();
+
+            Table table = new Table(bufferManager, null, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
+            int i;
+            Tuple tuple, res;
+            for (i = 0; i < 10000; i++) {
+                recordID = new RecordID((i / 203) + 1, i % 203);
+                res = table.getTuple(recordID, null);
+                assertNotNull(res);
+                assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
+                assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
+                assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
+            }
+
+            bufferManager.flushAllPages();
+            assertEquals(bufferManager.getSize(), 0);
+
+            recordID = new RecordID(table.getFirstPageId(), 0);
+            ArrayList<Object> values = new ArrayList<>();
+            for (i = 10000; i < 20000; i++) {
+                values.clear();
+                values.add(i * 3 + 1);
+                values.add(i * 3 + 2);
+                values.add(i * 3 + 3);
+                tuple = new Tuple(values, scheme);
+                assertTrue(table.insertTuple(tuple, recordID, null));
+//            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
+                res = table.getTuple(recordID, null);
+                assertNotNull(res);
+                assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
+                assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
+                assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            diskManager.close();
+//            diskManager.dropFile(dbName);
         }
     }
 
