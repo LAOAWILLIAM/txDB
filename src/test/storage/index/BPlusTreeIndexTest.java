@@ -5,10 +5,10 @@ import static org.junit.Assert.*;
 
 import txDB.Config;
 import txDB.buffer.BufferManager;
-import txDB.concurrency.LockManager;
 import txDB.concurrency.Transaction;
 import txDB.concurrency.TransactionManager;
 import txDB.storage.disk.DiskManager;
+import txDB.storage.index.BPlusTreeIndex;
 import txDB.storage.index.BPlusTreeIndex;
 import txDB.storage.page.BPlusTreeInnerPageNode;
 import txDB.storage.page.BPlusTreeLeafPageNode;
@@ -22,6 +22,9 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class BPlusTreeIndexTest {
     String dbName = "test";
@@ -455,5 +458,111 @@ public class BPlusTreeIndexTest {
             assertEquals(value, new Integer(i));
             i++;
         }
+    }
+
+    @Test
+    public void multipleThreadOperationTest() throws InterruptedException {
+        class T0Operation implements Runnable {
+            private BPlusTreeIndex<Integer, Integer> bpti;
+            private Transaction txn;
+            public T0Operation(BPlusTreeIndex<Integer, Integer> bpti, Transaction txn) {
+                this.bpti = bpti;
+                this.txn = txn;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(Math.round(200));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Finding 100 in txn " + txn.getTxnId() + ": result is " + bpti.find(100, txn));
+            }
+        }
+
+        class T1Operation implements Runnable {
+            private BPlusTreeIndex<Integer, Integer> bpti;
+            private Transaction txn;
+            public T1Operation(BPlusTreeIndex<Integer, Integer> bpti, Transaction txn) {
+                this.bpti = bpti;
+                this.txn = txn;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(Math.round(200));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                bpti.insert(100, 116, txn);
+            }
+        }
+
+        class T2Operation implements Runnable {
+            private BPlusTreeIndex<Integer, Integer> bpti;
+            private Transaction txn;
+            public T2Operation(BPlusTreeIndex<Integer, Integer> bpti, Transaction txn) {
+                this.bpti = bpti;
+                this.txn = txn;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(Math.round(200));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Finding 1 in txn " + txn.getTxnId() + ": result is " + bpti.find(1, txn));
+            }
+        }
+
+        int bufferSize = 10;
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
+        Transaction txn0 = transactionManager.begin();
+        Transaction txn1 = transactionManager.begin();
+        Transaction txn2 = transactionManager.begin();
+        Transaction txn3 = transactionManager.begin();
+        Transaction txn4 = transactionManager.begin();
+        Transaction txn5 = transactionManager.begin();
+
+        bpti.insert(5, 100, txn0);     // safe
+        bpti.insert(9, 101, txn0);     // safe
+        bpti.insert(13, 102, txn0);    // split in leaf
+        bpti.insert(20, 103, txn0);    // split in leaf
+        bpti.insert(16, 104, txn0);    // split in leaf and inner
+        bpti.insert(50, 105, txn0);    // split in leaf
+        bpti.insert(1, 106, txn0);     // safe
+        bpti.insert(80, 107, txn0);    // split in leaf and inner
+        bpti.insert(8, 108, txn0);     // split in leaf
+        bpti.insert(12, 109, txn0);    // safe
+        bpti.insert(11, 110, txn0);    // split in leaf and inner
+        bpti.insert(17, 111, txn0);    // safe
+        bpti.insert(18, 112, txn0);    // split in leaf
+        bpti.insert(14, 113, txn0);    // safe
+        bpti.insert(15, 114, txn0);    // split in leaf and inner
+        bpti.insert(120, 115, txn0);   // split in leaf
+//        bpt.insert(100, 116, txn0);   // split in leaf and inner
+
+//        bpt.find(100, txn0);
+//
+//        bpt.traverseLeafNodes();
+
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        executorService.submit(new T0Operation(bpti, txn1));
+        executorService.submit(new T1Operation(bpti, txn2));
+        executorService.submit(new T0Operation(bpti, txn3));
+        executorService.submit(new T2Operation(bpti, txn4));
+
+        // give detector enough time to finish detecting
+        TimeUnit.SECONDS.sleep(1);
+        executorService.shutdown();
+
+        bufferManager.flushAllPages();
+
+        assertEquals(bpti.find(100, txn5), new Integer(116));
     }
 }

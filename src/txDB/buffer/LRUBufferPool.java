@@ -146,8 +146,8 @@ public class LRUBufferPool {
             if (this.currentSize >= this.bufferSize)
                 if ((evictNode = this.victim()) == null)
                     // we do not throw RuntimeException here to keep system going
-                    // throw new RuntimeException("BUFFER EXCEEDED ERROR");
-                    return false;
+                     throw new RuntimeException("BUFFER EXCEEDED ERROR");
+//                    return false;
 
             DLinkedNode newNode = new DLinkedNode();
             newNode.key = key;

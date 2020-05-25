@@ -97,23 +97,64 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      */
     @SuppressWarnings("unchecked")
     private void insertHelper(int rootPageId, K key, V value, Transaction txn) {
+        if (rootPageId == Config.INVALID_PAGE_ID) return;
         Page rootPage = bufferManager.fetchPage(rootPageId);
         try {
             BPlusTreePageNode<K, V> bPlusTreePageNode = (BPlusTreePageNode<K, V>) deserializePageNode(rootPage);
 
-//            assert bPlusTreePageNode != null;
-            if (bPlusTreePageNode.isLeafPageNode()) {
-                ((BPlusTreeLeafPageNode<K, V>) bPlusTreePageNode).insertAndSort(key, value);
-
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutput out = new ObjectOutputStream(bos);
-                out.writeObject(bPlusTreePageNode);
-                rootPage.setPageData(bos.toByteArray());
-
-                if (bPlusTreePageNode.isOverSized()) {
-                    splitLeafNode((BPlusTreeLeafPageNode<K, V>) bPlusTreePageNode);
+            assert bPlusTreePageNode != null;
+            if (bPlusTreePageNode.isLeafPageNode() || txn.getTransactionState() == Transaction.TransactionState.RESTARTED) {
+                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": get write latch");
+                rootPage.writeLatch();
+            } else {
+                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": get read latch");
+                rootPage.readLatch();
+            }
+            txn.pushIndexPageQueue(rootPage);
+            if (rootPageId != this.rootPageId) {
+                Page page = txn.popIndexPageQueue();
+                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": when node with keys: " + bPlusTreePageNode.getKeys() + " get latch, then unlatch node with keys: ");
+                if (txn.getTransactionState() != Transaction.TransactionState.RESTARTED) {
+                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release read latch");
+                    page.readUnlatch();
+                } else {
+                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
+                    page.writeUnlatch();
                 }
-                this.bufferManager.unpinPage(rootPageId, true);
+                this.bufferManager.unpinPage(rootPageId, false);
+            }
+
+            if (bPlusTreePageNode.isLeafPageNode()) {
+
+                if (bPlusTreePageNode.getKeys().size() + 1 >= MAXDEGREE
+                        && txn.getTransactionState() != Transaction.TransactionState.RESTARTED
+                        && !this.rootPageNode.isLeafPageNode()) {
+                    Page page = txn.popIndexPageQueue();
+                    assert txn.getIndexPageQueue().size() == 0;
+                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
+                    rootPage.writeUnlatch();
+                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": not safe, restart txn");
+                    txn.setTransactionState(Transaction.TransactionState.RESTARTED);
+                    insertHelper(this.rootPageId, key, value, txn);
+                    txn.setTransactionState(Transaction.TransactionState.GROWING);
+                } else {
+                    ((BPlusTreeLeafPageNode<K, V>) bPlusTreePageNode).insertAndSort(key, value);
+
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    ObjectOutput out = new ObjectOutputStream(bos);
+                    out.writeObject(bPlusTreePageNode);
+                    rootPage.setPageData(bos.toByteArray());
+
+                    if (bPlusTreePageNode.isOverSized()) {
+                        splitLeafNode((BPlusTreeLeafPageNode<K, V>) bPlusTreePageNode);
+                    }
+
+                    Page page = txn.popIndexPageQueue();
+                    assert txn.getIndexPageQueue().size() == 0;
+                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
+                    rootPage.writeUnlatch();
+                    this.bufferManager.unpinPage(rootPageId, true);
+                }
             } else {
                 if (key.compareTo(bPlusTreePageNode.getKeys().get(0)) < 0) {
                     insertHelper(((BPlusTreeInnerPageNode<K, V>) bPlusTreePageNode).getChildren().get(0), key, value, txn);
@@ -147,7 +188,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                         }
                     }
                 }
-                this.bufferManager.unpinPage(rootPageId, false);
+//                this.bufferManager.unpinPage(rootPageId, false);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -313,40 +354,53 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
      */
     @SuppressWarnings("unchecked")
     private BPlusTreeLeafPageNode<K, V> findHelper(int rootPageId, K key, Transaction txn) {
-        BPlusTreePageNode<K, V> root = (BPlusTreePageNode<K, V>) deserializePageNode(rootPageId);
-        this.bufferManager.unpinPage(rootPageId, false);
-//        assert root != null;
-        if (root != null) {
-            if (root.getPageId() == Config.INVALID_PAGE_ID) return null;
-            else if (root.isLeafPageNode()) return ((BPlusTreeLeafPageNode<K, V>) root);
-            else {
-                if (key.compareTo(root.getKeys().get(0)) < 0) {
-                    return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(0), key, txn);
-                } else if (key.compareTo(root.getKeys().get(root.getKeys().size() - 1)) >= 0) {
-                    return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(((BPlusTreeInnerPageNode<K, V>) root).getChildren().size() - 1), key, txn);
-                } else {
-                    int i;
-                    for (i = 1; i < root.getKeys().size(); i++) {
-                        if (root.getKeys().get(i).compareTo(key) > 0)
-                            return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(i), key, txn);
-                    }
-                    // TODO: bug in Binary Search
-//                    int start = 1, end = root.getKeys().size() - 2;
-//                    while (start <= end) {
-//                        int mid = start + (end - start) / 2;
-//                        if (root.getKeys().get(mid).compareTo(key) > 0) {
-//                            if (root.getKeys().get(mid - 1).compareTo(key) <= 0) {
-//                                return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(mid), key);
-//                            } else {
-//                                end = mid - 1;
-//                            }
-//                        } else if (root.getKeys().get(mid).compareTo(key) == 0) {
-//                            return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(mid), key);
-//                        } else {
-//                            start = mid + 1;
-//                        }
-//                    }
+        if (rootPageId == Config.INVALID_PAGE_ID) return null;
+        Page rootPage = bufferManager.fetchPage(rootPageId);
+        rootPage.readLatch();
+        txn.pushIndexPageQueue(rootPage);
+        BPlusTreePageNode<K, V> root = (BPlusTreePageNode<K, V>) deserializePageNode(rootPage);
+        assert root != null;
+//        System.out.println("root page node: " + rootPageNode.getKeys() + ", " + root.equals(rootPageNode) + ", " + (rootPageId == this.rootPageId));
+        if (rootPageId != this.rootPageId) {
+            Page page = txn.popIndexPageQueue();
+            System.out.println("Finding " + key.toString() + " in txn " + txn.getTxnId() + ": when node with keys: " + root.getKeys() + " get latch, then unlatch node with keys: ");
+            page.readUnlatch();
+            this.bufferManager.unpinPage(rootPageId, false);
+        }
+
+        if (root.isLeafPageNode()) {
+            System.out.println("Finding " + key.toString() + " in txn " + txn.getTxnId() + ": finally, unlatch node with keys: " + root.getKeys());
+            txn.popIndexPageQueue();
+            rootPage.readUnlatch();
+            this.bufferManager.unpinPage(rootPageId, false);
+            return ((BPlusTreeLeafPageNode<K, V>) root);
+        } else {
+            if (key.compareTo(root.getKeys().get(0)) < 0) {
+                return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(0), key, txn);
+            } else if (key.compareTo(root.getKeys().get(root.getKeys().size() - 1)) >= 0) {
+                return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(((BPlusTreeInnerPageNode<K, V>) root).getChildren().size() - 1), key, txn);
+            } else {
+                int i;
+                for (i = 1; i < root.getKeys().size(); i++) {
+                    if (root.getKeys().get(i).compareTo(key) > 0)
+                        return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(i), key, txn);
                 }
+                // TODO: bug in Binary Search
+//                int start = 1, end = root.getKeys().size() - 2;
+//                while (start <= end) {
+//                    int mid = start + (end - start) / 2;
+//                    if (root.getKeys().get(mid).compareTo(key) > 0) {
+//                        if (root.getKeys().get(mid - 1).compareTo(key) <= 0) {
+//                            return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(mid), key, txn);
+//                        } else {
+//                            end = mid - 1;
+//                        }
+//                    } else if (root.getKeys().get(mid).compareTo(key) == 0) {
+//                        return findHelper(((BPlusTreeInnerPageNode<K, V>) root).getChildren().get(mid), key, txn;
+//                    } else {
+//                        start = mid + 1;
+//                    }
+//                }
             }
         }
 
