@@ -100,7 +100,7 @@ public class BPlusTreeIndexTest {
             pageData = bos.toByteArray();
             System.out.println("pageData length: " + pageData.length);
 
-            BPlusTreeLeafPageNode<Integer, RecordID> bPlusTreeLeafPageNode = new BPlusTreeLeafPageNode<Integer, RecordID>(16, new RecordID(7, 0), 1, 0, 100);
+            BPlusTreeLeafPageNode<Integer, RecordID> bPlusTreeLeafPageNode = new BPlusTreeLeafPageNode<>(16, new RecordID(7, 0), 1, 0, 100);
             bos.reset();
             out = new ObjectOutputStream(bos);
             out.writeObject(bPlusTreeLeafPageNode);

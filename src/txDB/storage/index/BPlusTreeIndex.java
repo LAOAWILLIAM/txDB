@@ -104,21 +104,21 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
 
             assert bPlusTreePageNode != null;
             if (bPlusTreePageNode.isLeafPageNode() || txn.getTransactionState() == Transaction.TransactionState.RESTARTED) {
-                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": get write latch");
+//                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": get write latch");
                 rootPage.writeLatch();
             } else {
-                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": get read latch");
+//                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": get read latch");
                 rootPage.readLatch();
             }
             txn.pushIndexPageQueue(rootPage);
             if (rootPageId != this.rootPageId) {
                 Page page = txn.popIndexPageQueue();
-                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": when node with keys: " + bPlusTreePageNode.getKeys() + " get latch, then unlatch node with keys: ");
+//                System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": when node with keys: " + bPlusTreePageNode.getKeys() + " get latch, then unlatch node with keys: ");
                 if (txn.getTransactionState() != Transaction.TransactionState.RESTARTED) {
-                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release read latch");
+//                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release read latch");
                     page.readUnlatch();
                 } else {
-                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
+//                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
                     page.writeUnlatch();
                 }
                 this.bufferManager.unpinPage(rootPageId, false);
@@ -129,11 +129,12 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                 if (bPlusTreePageNode.getKeys().size() + 1 >= MAXDEGREE
                         && txn.getTransactionState() != Transaction.TransactionState.RESTARTED
                         && !this.rootPageNode.isLeafPageNode()) {
-                    Page page = txn.popIndexPageQueue();
+                    txn.popIndexPageQueue();
                     assert txn.getIndexPageQueue().size() == 0;
-                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
+//                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
                     rootPage.writeUnlatch();
-                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": not safe, restart txn");
+                    this.bufferManager.unpinPage(rootPageId, false);
+//                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": not safe, restart txn");
                     txn.setTransactionState(Transaction.TransactionState.RESTARTED);
                     insertHelper(this.rootPageId, key, value, txn);
                     txn.setTransactionState(Transaction.TransactionState.GROWING);
@@ -149,9 +150,9 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
                         splitLeafNode((BPlusTreeLeafPageNode<K, V>) bPlusTreePageNode);
                     }
 
-                    Page page = txn.popIndexPageQueue();
+                    txn.popIndexPageQueue();
                     assert txn.getIndexPageQueue().size() == 0;
-                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
+//                    System.out.println("Inserting " + key.toString() + " in txn " + txn.getTxnId() + ": release write latch");
                     rootPage.writeUnlatch();
                     this.bufferManager.unpinPage(rootPageId, true);
                 }
@@ -363,13 +364,13 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
 //        System.out.println("root page node: " + rootPageNode.getKeys() + ", " + root.equals(rootPageNode) + ", " + (rootPageId == this.rootPageId));
         if (rootPageId != this.rootPageId) {
             Page page = txn.popIndexPageQueue();
-            System.out.println("Finding " + key.toString() + " in txn " + txn.getTxnId() + ": when node with keys: " + root.getKeys() + " get latch, then unlatch node with keys: ");
+//            System.out.println("Finding " + key.toString() + " in txn " + txn.getTxnId() + ": when node with keys: " + root.getKeys() + " get latch, then unlatch node with keys: ");
             page.readUnlatch();
             this.bufferManager.unpinPage(rootPageId, false);
         }
 
         if (root.isLeafPageNode()) {
-            System.out.println("Finding " + key.toString() + " in txn " + txn.getTxnId() + ": finally, unlatch node with keys: " + root.getKeys());
+//            System.out.println("Finding " + key.toString() + " in txn " + txn.getTxnId() + ": finally, unlatch node with keys: " + root.getKeys());
             txn.popIndexPageQueue();
             rootPage.readUnlatch();
             this.bufferManager.unpinPage(rootPageId, false);

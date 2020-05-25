@@ -29,7 +29,7 @@ public class TableTest {
     TransactionManager transactionManager = new TransactionManager(null, null);
 
     public TableTest() throws IOException {
-//        diskManager.dropFile(dbName);
+        diskManager.dropFile(dbName);
         diskManager.createFile(dbName);
         diskManager.useFile(dbName);
     }
@@ -356,7 +356,7 @@ public class TableTest {
 
     @Test
     public void getTupleWithIndexTest() throws IOException, ClassNotFoundException {
-        int bufferSize = 100;
+        int bufferSize = 10;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
         Transaction txn0 = transactionManager.begin();
 
@@ -378,10 +378,10 @@ public class TableTest {
         Scheme scheme = new Scheme(columns);
         String relationName = "table0";
 
-        Table table = new Table(bufferManager, null, null, null);
+        Table table = new Table(bufferManager, null, null, txn0);
         assertEquals(table.getFirstPageId(), 1);
         RecordID recordID = new RecordID(table.getFirstPageId(), 0);
-        assertNull(table.getTuple(recordID, null));
+        assertNull(table.getTuple(recordID, txn0));
 
         MetaDataPage.RelationMetaData relationMetaData =
                 metaDataPage.new RelationMetaData(scheme, relationName, table.getFirstPageId());
@@ -391,7 +391,7 @@ public class TableTest {
          * here I do a simulation: create index index0 on table0 (col0);
          */
         String indexName = "index0";
-        BPlusTreeIndex<Integer, RecordID> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 144, 177);
+        BPlusTreeIndex<Integer, RecordID> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100, 120);
         assertEquals(bpti.getRootPageId(), 2);
         ArrayList<Column> indexAttributes = new ArrayList<>();
         indexAttributes.add(col0);
@@ -414,15 +414,15 @@ public class TableTest {
             values.clear();
             int column0 = i * 3 + 1;
             values.add(column0);
-            values.add(i * 3 + 2);
-            values.add(i * 3 + 3);
+            values.add(column0 + 1);
+            values.add(column0 + 2);
             tuple = new Tuple(values, scheme);
-            assertTrue(table.insertTuple(tuple, recordID, null));
+            assertTrue(table.insertTuple(tuple, recordID, txn0));
             bpti.insert(column0, recordID, txn0);
 //            bpti.insert(column0, recordID1);
 //            assertEquals(bpti.find(column0).getPageId(), 6);
 //            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
-//            res = table.getTuple(bpti.find(column0), null);
+//            res = table.getTuple(bpti.find(column0, txn0), txn0);
 //            assertNotNull(res);
 //            assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
 //            assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
@@ -451,10 +451,10 @@ public class TableTest {
             assertEquals(metaDataPage.getIndexMetaData(indexName).getIndexName(), "index0");
 
             table = new Table(bufferManager, null, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
-            bpti = new BPlusTreeIndex<>(bufferManager, metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 144, 177);
+            bpti = new BPlusTreeIndex<>(bufferManager, metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 100, 120);
             for (i = 0; i < 100000; i++) {
 //                System.out.println(i);
-                assertEquals(table.getTuple(bpti.find(i * 3 + 1, txn0), null).getValue(scheme, 1), new Integer(i * 3 + 2));
+                assertEquals(table.getTuple(bpti.find(i * 3 + 1, txn0), txn0).getValue(scheme, 1), new Integer(i * 3 + 2));
             }
 //            assertEquals(table.getTuple(bpti.find(3001), null).getValue(scheme, 1), new Integer(3002));
 //            assertEquals(table.getTuple(bpti.find(18001), null).getValue(scheme, 1), new Integer(18002));
