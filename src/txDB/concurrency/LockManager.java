@@ -99,7 +99,7 @@ public class LockManager {
             return requestQueue.size();
         }
 
-        public void findAndRemoveRequestQueue(Transaction txn) {
+        public void findAndRemoveRequestQueue(Transaction txn, RecordID recordID) {
             for (LockRequest lockRequest : requestQueue) {
                 if (lockRequest.getTxnId() == txn.getTxnId()) {
                     if (lockRequest.getLockType() == lockType.SHARED) {
@@ -108,8 +108,10 @@ public class LockManager {
                         } else {
                             getOldestRequestLockType(txn);
                         }
+                        txn.getSharedLockSet().remove(recordID);
                     } else {
                         getOldestRequestLockType(txn);
+                        txn.getExclusiveLockSet().remove(recordID);
                     }
                     removeRequestQueue(lockRequest);
                     break;
@@ -190,6 +192,7 @@ public class LockManager {
                 lockRequestQueue.pushRequestQueue(lockRequest);
                 lockTable.put(recordID, lockRequestQueue);
                 lockRequestQueue.setShared(true);
+                txn.getSharedLockSet().add(recordID);
                 notifyAll();
                 System.out.println("txn " + txn.getTxnId() + " get shared lock on tuple " + recordID.getTupleIndex());
                 return true;
@@ -226,6 +229,7 @@ public class LockManager {
 
             System.out.println("txn " + txn.getTxnId() + " get shared lock on tuple " + recordID.getTupleIndex());
             lockRequest.setGranted(true);
+            txn.getSharedLockSet().add(recordID);
             notifyAll();
 
             return true;
@@ -254,6 +258,7 @@ public class LockManager {
                 lockRequestQueue.pushRequestQueue(lockRequest);
                 lockTable.put(recordID, lockRequestQueue);
                 lockRequestQueue.setShared(false);
+                txn.getExclusiveLockSet().add(recordID);
                 System.out.println("txn " + txn.getTxnId() + " get exclusive lock on tuple " + recordID.getTupleIndex());
                 return true;
             }
@@ -296,6 +301,7 @@ public class LockManager {
 
             System.out.println("txn " + txn.getTxnId() + " get exclusive lock on tuple " + recordID.getTupleIndex());
             lockRequest.setGranted(true);
+            txn.getExclusiveLockSet().add(recordID);
 
             return true;
         }
@@ -312,7 +318,7 @@ public class LockManager {
         synchronized (this) {
             System.out.println("txn " + txn.getTxnId() + " release lock");
             LockRequestQueue lockRequestQueue = lockTable.get(recordID);
-            lockRequestQueue.findAndRemoveRequestQueue(txn);
+            lockRequestQueue.findAndRemoveRequestQueue(txn, recordID);
             removeTxnNode(txn.getTxnId());
 //            System.out.println("remove node: " + txn.getTxnId());
             notifyAll();

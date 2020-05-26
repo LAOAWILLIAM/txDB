@@ -53,7 +53,6 @@ public class Table {
         if (curPage == null) {
 //            System.out.println("bug 2");
             // abort this transaction
-            // TODO
             txn.setTransactionState(TransactionState.ABORTED);
             return false;
         }
@@ -80,7 +79,6 @@ public class Table {
                     curTablePage.writeUnlatch();
                     bufferManager.unpinPage(curTablePage.getPageId(), false);
                     // abort this transaction
-                    // TODO
                     txn.setTransactionState(TransactionState.ABORTED);
                     return false;
                 }
@@ -105,11 +103,10 @@ public class Table {
         return true;
     }
 
-    public Tuple getTuple(RecordID recordID, Transaction txn) {
+    public Tuple getTuple(RecordID recordID, Transaction txn) throws InterruptedException {
         Page page = bufferManager.fetchPage(recordID.getPageId());
         if (page == null) {
             // abort this transaction
-            // TODO
             txn.setTransactionState(TransactionState.ABORTED);
             return null;
         }

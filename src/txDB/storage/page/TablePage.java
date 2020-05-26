@@ -8,6 +8,7 @@ import txDB.concurrency.Transaction;
 import txDB.recovery.LogManager;
 import txDB.storage.table.RecordID;
 import txDB.storage.table.Tuple;
+import txDB.concurrency.Transaction.TransactionState;
 
 /**
  * Reference: This page format is designed by BusTub team, Carnegie Mellon University Database Group
@@ -119,15 +120,15 @@ public class TablePage extends Page {
 
     /**
      *
-     * @param rid
+     * @param recordID
      * @return
      */
-    public Tuple getTuple(RecordID rid, Transaction txn, LockManager lockManager) {
-        int tupleIndex = rid.getTupleIndex();
+    public Tuple getTuple(RecordID recordID, Transaction txn, LockManager lockManager) throws InterruptedException {
+        int tupleIndex = recordID.getTupleIndex();
         if (tupleIndex > getTupleCount()) {
             if (Config.ENABLE_LOGGING) {
                 // abort this transaction
-                // TODO
+                txn.setTransactionState(TransactionState.ABORTED);
             }
             return null;
         }
@@ -136,13 +137,16 @@ public class TablePage extends Page {
         if (tupleIsDeleted(tupleSize)) {
             if (Config.ENABLE_LOGGING) {
                 // abort this transaction
-                // TODO
+                txn.setTransactionState(TransactionState.ABORTED);
             }
             return null;
         }
 
         // here we have a valid tuple and we shall get a shared lock
-        // TODO
+        if (!txn.isRecordSharedLocked(recordID)
+                && !txn.isRecordExclusiveLocked(recordID)
+                && !lockManager.acquireSharedLock(txn, recordID))
+            return null;
 
         // after get the lock, we can return the tuple
         int tupleOffset = getTupleOffset(tupleIndex);
@@ -153,19 +157,19 @@ public class TablePage extends Page {
             tupleData[i] = pageBuffer.get(tupleOffset + i);
         }
 
-        return new Tuple(tupleData, rid, tupleSize, true);
+        return new Tuple(tupleData, recordID, tupleSize, true);
     }
 
     /**
      *
      * @param tuple
-     * @param rid
+     * @param recordID
      * @param txn
      * @param lockManager
      * @param logManager
      * @return
      */
-    public boolean insertTuple(Tuple tuple, RecordID rid, Transaction txn, LockManager lockManager, LogManager logManager) {
+    public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) {
         if (getRemainingFreeSpace() < tuple.getTupleSize() + TUPLE_POINTER_SIZE) return false;
 
         int i, tupleCount = getTupleCount();
@@ -183,7 +187,7 @@ public class TablePage extends Page {
         setTupleOffset(i, getFreeSpacePointer());
         setTupleSize(i, tuple.getTupleSize());
 
-        rid.setRecordId(getTablePageId(), i);
+        recordID.setRecordId(getTablePageId(), i);
         if (i == getTupleCount()) setTupleCount(getTupleCount() + 1);
 
         if (Config.ENABLE_LOGGING) {
@@ -195,30 +199,30 @@ public class TablePage extends Page {
 
     /**
      *
-     * @param rid
+     * @param recordID
      * @return
      */
-    public boolean updateTuple(RecordID rid, Transaction txn, LockManager lockManager, LogManager logManager) {
+    public boolean updateTuple(RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) {
         // TODO
         return false;
     }
 
     /**
      *
-     * @param rid
+     * @param recordID
      * @return
      */
-    public boolean markDelete(RecordID rid, Transaction txn, LockManager lockManager, LogManager logManager) {
+    public boolean markDelete(RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) {
         // TODO
         return false;
     }
 
     /**
      *
-     * @param rid
+     * @param recordID
      * @return
      */
-    public boolean applyDelete(RecordID rid, Transaction txn, LockManager lockManager, LogManager logManager) {
+    public boolean applyDelete(RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) {
         // TODO
         return false;
     }
@@ -227,7 +231,7 @@ public class TablePage extends Page {
      *
      * @return
      */
-    private int getTupleCount() {
+    public int getTupleCount() {
         ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
         return pageBuffer.getInt(TUPLE_COUNT_OFFSET);
     }

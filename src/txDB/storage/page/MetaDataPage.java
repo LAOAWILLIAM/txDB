@@ -1,10 +1,10 @@
 package txDB.storage.page;
 
-import com.sun.tools.javac.util.List;
 import txDB.storage.table.Scheme;
 import txDB.storage.table.Column;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -15,7 +15,7 @@ public class MetaDataPage implements Serializable {
     private HashMap<String, RelationMetaData> relationMetaDataMap;
     private HashMap<String, IndexMetaData> indexMetaDataMap;
     // maybe useful in future
-    private ArrayList<Integer> freeList;
+    private List<Integer> freeList;
 
     public MetaDataPage() {
         this.relationMetaDataMap = new HashMap<>();
@@ -46,7 +46,7 @@ public class MetaDataPage implements Serializable {
     }
 
     // maybe useful in future
-    public ArrayList<Integer> getFreeList() {
+    public List<Integer> getFreeList() {
         return this.freeList;
     }
 

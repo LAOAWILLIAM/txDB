@@ -207,9 +207,10 @@ public class TableTest {
     }
 
     @Test
-    public void combineMetaDataAndTableTest() {
+    public void combineMetaDataAndTableTest() throws InterruptedException {
         int bufferSize = 3;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
         assertNotNull(page0);
@@ -229,9 +230,9 @@ public class TableTest {
         Scheme scheme = new Scheme(columns);
         String relationName = "table0";
 
-        Table table = new Table(bufferManager, null, null, null);
+        Table table = new Table(bufferManager, null, null, txn0);
         RecordID recordID = new RecordID(table.getFirstPageId(), 0);
-        assertNull(table.getTuple(recordID, null));
+        assertNull(table.getTuple(recordID, txn0));
 
         MetaDataPage.RelationMetaData relationMetaData =
                 metaDataPage.new RelationMetaData(scheme, relationName, table.getFirstPageId());
@@ -256,9 +257,9 @@ public class TableTest {
             values.add(i * 3 + 2);
             values.add(i * 3 + 3);
             tuple = new Tuple(values, scheme);
-            assertTrue(table.insertTuple(tuple, recordID, null));
+            assertTrue(table.insertTuple(tuple, recordID, txn0));
 //            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
-            res = table.getTuple(recordID, null);
+            res = table.getTuple(recordID, txn0);
             assertNotNull(res);
             assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
             assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
@@ -281,7 +282,7 @@ public class TableTest {
             table = new Table(bufferManager, null, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
             for (i = 0; i < 10000; i++) {
                 recordID = new RecordID((i / 203) + 1, i % 203);
-                res = table.getTuple(recordID, null);
+                res = table.getTuple(recordID, txn0);
                 assertNotNull(res);
                 assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
                 assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
@@ -346,7 +347,7 @@ public class TableTest {
                 assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
                 assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
             }
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException | InterruptedException e) {
             e.printStackTrace();
         } finally {
             diskManager.close();
@@ -355,7 +356,7 @@ public class TableTest {
     }
 
     @Test
-    public void getTupleWithIndexTest() throws IOException, ClassNotFoundException {
+    public void getTupleWithIndexTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 10;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
         Transaction txn0 = transactionManager.begin();

@@ -230,7 +230,7 @@ public class LockManagerTest {
         }
 
         // give threads some time to release lock and acquire lock
-        TimeUnit.SECONDS.sleep(30);
+        TimeUnit.SECONDS.sleep(25);
         executorService.shutdown();
         lockManager.close();
     }
