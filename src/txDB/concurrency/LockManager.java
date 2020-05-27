@@ -194,7 +194,7 @@ public class LockManager {
                 lockRequestQueue.setShared(true);
                 txn.getSharedLockSet().add(recordID);
                 notifyAll();
-                System.out.println("txn " + txn.getTxnId() + " get shared lock on tuple " + recordID.getTupleIndex());
+//                System.out.println("txn " + txn.getTxnId() + " get shared lock on tuple " + recordID.getTupleIndex());
                 return true;
             }
 
@@ -227,7 +227,7 @@ public class LockManager {
                 }
             }
 
-            System.out.println("txn " + txn.getTxnId() + " get shared lock on tuple " + recordID.getTupleIndex());
+//            System.out.println("txn " + txn.getTxnId() + " get shared lock on tuple " + recordID.getTupleIndex());
             lockRequest.setGranted(true);
             txn.getSharedLockSet().add(recordID);
             notifyAll();
@@ -316,7 +316,7 @@ public class LockManager {
     public boolean unlock(Transaction txn, RecordID recordID) {
         // TODO
         synchronized (this) {
-            System.out.println("txn " + txn.getTxnId() + " release lock");
+//            System.out.println("txn " + txn.getTxnId() + " release lock");
             LockRequestQueue lockRequestQueue = lockTable.get(recordID);
             lockRequestQueue.findAndRemoveRequestQueue(txn, recordID);
             removeTxnNode(txn.getTxnId());

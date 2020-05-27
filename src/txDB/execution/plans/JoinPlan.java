@@ -9,5 +9,6 @@ public class JoinPlan extends Plan {
     // TODO
     public JoinPlan(List<Plan> childrenPlanNodes) {
         super(childrenPlanNodes);
+        this.pt = planType.JOIN;
     }
 }

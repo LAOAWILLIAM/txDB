@@ -7,11 +7,12 @@ import java.util.List;
  */
 public class SeqScanPlan extends Plan {
     // TODO
-    private String relationName;
+    private final String relationName;
 
     public SeqScanPlan(List<Plan> childrenPlanNodes, String relationName) {
         super(childrenPlanNodes);
         this.relationName = relationName;
+        this.pt = planType.SEQSCAN;
     }
 
     public String getRelationName() {

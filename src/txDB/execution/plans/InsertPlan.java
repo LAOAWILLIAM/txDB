@@ -9,5 +9,6 @@ public class InsertPlan extends Plan {
     // TODO
     public InsertPlan(List<Plan> childrenPlanNodes) {
         super(childrenPlanNodes);
+        this.pt = planType.INSERT;
     }
 }

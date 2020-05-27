@@ -10,6 +10,8 @@ import java.util.List;
 public class Plan {
     // TODO
     protected List<Plan> childrenPlanNodes;
+    public enum planType {SEQSCAN, INSERT, JOIN, AGGREGATION, PREDEVAL}
+    protected planType pt;
 
     public Plan(List<Plan> childrenPlanNodes) {
         this.childrenPlanNodes = new ArrayList<>(childrenPlanNodes);
@@ -17,5 +19,9 @@ public class Plan {
 
     public List<Plan> getChildrenPlanNodes() {
         return childrenPlanNodes;
+    }
+
+    public planType getPlanType() {
+        return pt;
     }
 }
