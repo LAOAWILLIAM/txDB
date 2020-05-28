@@ -25,7 +25,8 @@ public class ExecutionTest {
     // TODO
     String dbName = "test";
     DiskManager diskManager = new DiskManager();
-    TransactionManager transactionManager = new TransactionManager(null, null);
+    LockManager lockManager = new LockManager(LockManager.twoPhaseLockType.REGULAR, LockManager.deadlockType.DETECTION);
+    TransactionManager transactionManager = new TransactionManager(lockManager, null);
 
     public ExecutionTest() throws IOException {
 //        diskManager.dropFile(dbName);
@@ -52,6 +53,9 @@ public class ExecutionTest {
         SeqScanPlan seqScanPlan = new SeqScanPlan(new ArrayList<>(), "table0");
         SeqScanExecutor seqScanExecutor = new SeqScanExecutor(seqScanPlan, diskManager, bufferManager, lockManager, null, txn0);
 
+        /**
+         * select * from table0;
+         */
         Tuple tuple;
         int i = 0;
         while ((tuple = seqScanExecutor.next()) != null) {
@@ -64,7 +68,6 @@ public class ExecutionTest {
     public void seqScanWithPredicatesTest() throws InterruptedException {
         int bufferSize = 10;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
-        LockManager lockManager = new LockManager(LockManager.twoPhaseLockType.REGULAR, LockManager.deadlockType.DETECTION);
         Transaction txn0 = transactionManager.begin();
 
         ArrayList<Column> columns = new ArrayList<>();
@@ -215,5 +218,12 @@ public class ExecutionTest {
             if (i == 500) i = 5000;
         }
         assertEquals(i, 9947);
+
+        diskManager.close();
+    }
+
+    @Test
+    public void joinTest() {
+
     }
 }

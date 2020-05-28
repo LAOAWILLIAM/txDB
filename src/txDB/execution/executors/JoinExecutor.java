@@ -7,6 +7,9 @@ import txDB.execution.plans.JoinPlan;
 import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 
+/**
+ * I use Hash Join here
+ */
 public class JoinExecutor extends Executor {
     private JoinPlan joinPlan;
     private Executor childExecutor;

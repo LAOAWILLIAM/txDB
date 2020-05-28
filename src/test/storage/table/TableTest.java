@@ -3,6 +3,7 @@ package test.storage.table;
 import org.junit.Test;
 import txDB.Config;
 import txDB.buffer.BufferManager;
+import txDB.concurrency.LockManager;
 import txDB.concurrency.Transaction;
 import txDB.concurrency.TransactionManager;
 import txDB.recovery.LogManager;
@@ -26,10 +27,11 @@ public class TableTest {
     // TODO
     String dbName = "test";
     DiskManager diskManager = new DiskManager();
-    TransactionManager transactionManager = new TransactionManager(null, null);
+    LockManager lockManager = new LockManager(LockManager.twoPhaseLockType.REGULAR, LockManager.deadlockType.DETECTION);
+    TransactionManager transactionManager = new TransactionManager(lockManager, null);
 
     public TableTest() throws IOException {
-        diskManager.dropFile(dbName);
+//        diskManager.dropFile(dbName);
         diskManager.createFile(dbName);
         diskManager.useFile(dbName);
     }
@@ -38,6 +40,7 @@ public class TableTest {
     public void singlePageInsertTupleTest() {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
         assertNotNull(page0);
@@ -47,11 +50,11 @@ public class TableTest {
             TablePage tablePage = new TablePage(page0);
             bufferManager.replacePage(tablePage);
             tablePage.initialize(page0.getPageId(), Config.PAGE_SIZE, Config.INVALID_PAGE_ID,
-                    null, null);
+                    null, txn0);
             assertEquals(tablePage.getTablePageId(), 0);
 
             RecordID recordID = new RecordID(0, 0);
-            assertNull(tablePage.getTuple(recordID, null, null));
+            assertNull(tablePage.getTuple(recordID, txn0, lockManager));
 
             ArrayList<Column> columns = new ArrayList<>();
             Column col0 = new Column("col0", Type.ColumnValueType.INTEGER, 4, 0);
@@ -66,8 +69,8 @@ public class TableTest {
             values.add(2);
             values.add(3);
             Tuple tuple = new Tuple(values, scheme);
-            tablePage.insertTuple(tuple, recordID, null, null, null);
-            Tuple res = tablePage.getTuple(recordID, null, null);
+            tablePage.insertTuple(tuple, recordID, txn0, lockManager, null);
+            Tuple res = tablePage.getTuple(recordID, txn0, lockManager);
             assertNotNull(res);
             assertEquals(res.getValue(scheme, 0), new Integer(1));
             assertEquals(res.getValue(scheme, 1), new Integer(2));
@@ -84,6 +87,7 @@ public class TableTest {
     public void singlePageFillTupleTest() {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
         assertNotNull(page0);
@@ -93,11 +97,11 @@ public class TableTest {
             TablePage tablePage = new TablePage(page0);
             bufferManager.replacePage(tablePage);
             tablePage.initialize(page0.getPageId(), Config.PAGE_SIZE, Config.INVALID_PAGE_ID,
-                    null, null);
+                    null, txn0);
             assertEquals(tablePage.getTablePageId(), 0);
 
             RecordID recordID = new RecordID(0, 0);
-            assertNull(tablePage.getTuple(recordID, null, null));
+            assertNull(tablePage.getTuple(recordID, txn0, lockManager));
 
             ArrayList<Column> columns = new ArrayList<>();
             Column col0 = new Column("col0", Type.ColumnValueType.INTEGER, 4, 0);
@@ -114,8 +118,8 @@ public class TableTest {
             Tuple tuple = new Tuple(values, scheme);
 
             int i = 0;
-            while (tablePage.insertTuple(tuple, recordID, null, null, null)) {
-                Tuple res = tablePage.getTuple(recordID, null, null);
+            while (tablePage.insertTuple(tuple, recordID, txn0, lockManager, null)) {
+                Tuple res = tablePage.getTuple(recordID, txn0, lockManager);
                 assertNotNull(res);
                 assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
                 assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
@@ -143,11 +147,12 @@ public class TableTest {
     public void tableInsertTupleTest() {
         int bufferSize = 3;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        Transaction txn0 = transactionManager.begin();
 
         try {
-            Table table = new Table(bufferManager, null, null, null);
+            Table table = new Table(bufferManager, lockManager, null, txn0);
             RecordID recordID = new RecordID(0, 0);
-            assertNull(table.getTuple(recordID, null));
+            assertNull(table.getTuple(recordID, txn0));
 
             ArrayList<Column> columns = new ArrayList<>();
             Column col0 = new Column("col0", Type.ColumnValueType.BIGINT, 8, 0);
@@ -170,9 +175,9 @@ public class TableTest {
                 values.add((long)(i * 3 + 3));
                 values.add((long)(i * 3 + 4));
                 tuple = new Tuple(values, scheme);
-                assertTrue(table.insertTuple(tuple, recordID, null));
+                assertTrue(table.insertTuple(tuple, recordID, txn0));
                 System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
-                res = table.getTuple(recordID, null);
+                res = table.getTuple(recordID, txn0);
                 assertNotNull(res);
                 assertEquals(res.getValue(scheme, 0), new Long(i * 3 + 1));
                 assertEquals(res.getValue(scheme, 1), new Long(i * 3 + 2));
@@ -191,7 +196,7 @@ public class TableTest {
 
             for (i = 0; i < 700; i++) {
                 recordID = new RecordID(i / 101, i % 101);
-                res = table.getTuple(recordID, null);
+                res = table.getTuple(recordID, txn0);
                 assertNotNull(res);
                 assertEquals(res.getValue(scheme, 0), new Long(i * 3 + 1));
                 assertEquals(res.getValue(scheme, 1), new Long(i * 3 + 2));
@@ -230,7 +235,7 @@ public class TableTest {
         Scheme scheme = new Scheme(columns);
         String relationName = "table0";
 
-        Table table = new Table(bufferManager, null, null, txn0);
+        Table table = new Table(bufferManager, lockManager, null, txn0);
         RecordID recordID = new RecordID(table.getFirstPageId(), 0);
         assertNull(table.getTuple(recordID, txn0));
 
@@ -279,7 +284,7 @@ public class TableTest {
             assertEquals(metaDataPage.getRelationMetaData(relationName).getRootRelationPageId(), 1);
             assertEquals(metaDataPage.getRelationMetaData(relationName).getRelationName(), "table0");
 
-            table = new Table(bufferManager, null, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
+            table = new Table(bufferManager, lockManager, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
             for (i = 0; i < 10000; i++) {
                 recordID = new RecordID((i / 203) + 1, i % 203);
                 res = table.getTuple(recordID, txn0);
@@ -303,6 +308,7 @@ public class TableTest {
     public void tablePersistTest() {
         int bufferSize = 3;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.fetchPage(0);
         String relationName = "table0";
@@ -316,12 +322,12 @@ public class TableTest {
             assertEquals(metaDataPage.getRelationMetaData(relationName).getRelationName(), "table0");
             Scheme scheme = metaDataPage.getRelationMetaData(relationName).getScheme();
 
-            Table table = new Table(bufferManager, null, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
+            Table table = new Table(bufferManager, lockManager, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
             int i;
             Tuple tuple, res;
             for (i = 0; i < 10000; i++) {
                 recordID = new RecordID((i / 203) + 1, i % 203);
-                res = table.getTuple(recordID, null);
+                res = table.getTuple(recordID, txn0);
                 assertNotNull(res);
                 assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
                 assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
@@ -339,9 +345,9 @@ public class TableTest {
                 values.add(i * 3 + 2);
                 values.add(i * 3 + 3);
                 tuple = new Tuple(values, scheme);
-                assertTrue(table.insertTuple(tuple, recordID, null));
+                assertTrue(table.insertTuple(tuple, recordID, txn0));
 //            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
-                res = table.getTuple(recordID, null);
+                res = table.getTuple(recordID, txn0);
                 assertNotNull(res);
                 assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
                 assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
@@ -352,6 +358,78 @@ public class TableTest {
         } finally {
             diskManager.close();
 //            diskManager.dropFile(dbName);
+        }
+    }
+
+    @Test
+    public void createSecondTableTest() throws InterruptedException {
+        int bufferSize = 100;
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        Transaction txn0 = transactionManager.begin();
+
+        Page page0 = bufferManager.fetchPage(0);
+        String relationName = "table1";
+
+        /**
+         * here I do a simulation: create table table1;
+         */
+        try {
+            ByteArrayInputStream bis = new ByteArrayInputStream(page0.getPageData());
+            ObjectInputStream in = new ObjectInputStream(bis);
+            MetaDataPage metaDataPage = (MetaDataPage) in.readObject();
+
+            ArrayList<Column> columns = new ArrayList<>();
+            Column col0 = new Column("col0", Type.ColumnValueType.INTEGER, 4, 0);
+            Column col1 = new Column("col3", Type.ColumnValueType.INTEGER, 4, 0);
+            Column col2 = new Column("col4", Type.ColumnValueType.INTEGER, 4, 0);
+            columns.add(col0);
+            columns.add(col1);
+            columns.add(col2);
+            Scheme scheme = new Scheme(columns);
+
+            if (metaDataPage.getRelationMetaData(relationName) == null) {
+                Table table = new Table(bufferManager, lockManager, null, txn0);
+
+                MetaDataPage.RelationMetaData relationMetaData =
+                        metaDataPage.new RelationMetaData(scheme, relationName, table.getFirstPageId());
+                metaDataPage.addRelationMetaData(relationName, relationMetaData);
+
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ObjectOutput out = new ObjectOutputStream(bos);
+                out.writeObject(metaDataPage);
+                page0.setPageData(bos.toByteArray());
+                // TODO: meta page size should be considered to avoid overflow
+//                System.out.println(bos.toByteArray().length);
+                bufferManager.unpinPage(page0.getPageId(), true);
+            } else {
+                System.out.println(relationName + " already created");
+            }
+
+            Table table = new Table(bufferManager, lockManager, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
+            RecordID recordID = new RecordID(table.getFirstPageId(), 0);
+
+            ArrayList<Object> values = new ArrayList<>();
+            Tuple tuple, res;
+            int i;
+            for (i = 0; i < 7500; i += 15) {
+                values.clear();
+                values.add(i * 3 + 1);
+                values.add(i * 3 + 2);
+                values.add(i * 3 + 3);
+                tuple = new Tuple(values, scheme);
+                assertTrue(table.insertTuple(tuple, recordID, txn0));
+    //            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
+                res = table.getTuple(recordID, txn0);
+                assertNotNull(res);
+                assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
+                assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
+                assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
+            }
+
+            bufferManager.flushAllPages();
+            assertEquals(bufferManager.getSize(), 0);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
