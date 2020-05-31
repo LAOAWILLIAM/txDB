@@ -1,5 +1,7 @@
 package txDB.execution.plans;
 
+import txDB.storage.table.Scheme;
+
 import java.util.List;
 
 /**
@@ -7,6 +9,8 @@ import java.util.List;
  */
 public class JoinPlan extends Plan {
     // TODO
+    private Scheme scheme;
+
     public JoinPlan(List<Plan> childrenPlanNodes) {
         super(childrenPlanNodes);
         this.pt = planType.JOIN;

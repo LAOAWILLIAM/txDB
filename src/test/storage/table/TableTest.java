@@ -401,6 +401,8 @@ public class TableTest {
                 // TODO: meta page size should be considered to avoid overflow
 //                System.out.println(bos.toByteArray().length);
                 bufferManager.unpinPage(page0.getPageId(), true);
+                bufferManager.flushPage(page0.getPageId());
+                return;
             } else {
                 System.out.println(relationName + " already created");
             }

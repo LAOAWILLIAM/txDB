@@ -13,6 +13,7 @@ import java.util.*;
  */
 public class BPlusTreeIndex<K extends Comparable<K>, V> {
     // TODO: thread-safe needed, here I choose optimistic assumption
+    // TODO: bulk insertion needed to build a whole b+ tree
     private BufferManager bufferManager;
     private int rootPageId;
     private BPlusTreePageNode<K, V> rootPageNode;

@@ -38,7 +38,6 @@ public class ExecutionTest {
     public void seqScanTest() throws InterruptedException {
         int bufferSize = 10;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
-        LockManager lockManager = new LockManager(LockManager.twoPhaseLockType.REGULAR, LockManager.deadlockType.DETECTION);
         Transaction txn0 = transactionManager.begin();
 
         ArrayList<Column> columns = new ArrayList<>();
@@ -61,6 +60,26 @@ public class ExecutionTest {
         while ((tuple = seqScanExecutor.next()) != null) {
             assertEquals(tuple.getValue(scheme, 1), new Integer(i * 3 + 2));
             i++;
+        }
+
+        columns.clear();
+        Column col3 = new Column("col3", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col4 = new Column("col4", Type.ColumnValueType.INTEGER, 4, 0);
+        columns.add(col0);
+        columns.add(col3);
+        columns.add(col4);
+        scheme = new Scheme(columns);
+
+        seqScanPlan = new SeqScanPlan(new ArrayList<>(), "table1");
+        seqScanExecutor = new SeqScanExecutor(seqScanPlan, diskManager, bufferManager, lockManager, null, txn0);
+
+        /**
+         * select * from table1;
+         */
+        i = 0;
+        while ((tuple = seqScanExecutor.next()) != null) {
+            assertEquals(tuple.getValue(scheme, 1), new Integer(i * 3 + 2));
+            i += 15;
         }
     }
 
@@ -224,6 +243,10 @@ public class ExecutionTest {
 
     @Test
     public void joinTest() {
+        int bufferSize = 10;
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        Transaction txn0 = transactionManager.begin();
+
 
     }
 }

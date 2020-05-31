@@ -19,7 +19,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @param <V>
  */
 public class InMemoryBPlusTreeIndex<K extends Comparable<K>, V> {
-    // TODO: not thread safe
+    // TODO: not thread safe in delete operation
+    // TODO: bulk insertion needed to build a whole b+ tree
     private Node<K, V> root;
     private static int MAXDEGREE;
     private TransactionManager transactionManager;

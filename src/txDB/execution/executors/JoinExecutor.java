@@ -8,7 +8,7 @@ import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 
 /**
- * I use Hash Join here
+ * I use Grace Hash Join here
  */
 public class JoinExecutor extends Executor {
     private JoinPlan joinPlan;
