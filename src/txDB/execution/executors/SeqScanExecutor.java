@@ -22,7 +22,6 @@ import java.io.ObjectInputStream;
  * It is a sequential scan executor
  */
 public class SeqScanExecutor extends Executor {
-    // TODO
     private SeqScanPlan seqScanPlan;
     private Table table;
     private int curIndex;
@@ -81,6 +80,10 @@ public class SeqScanExecutor extends Executor {
         if (curCount == tupleCount) {
             bufferManager.unpinPage(curPageId, false);
 
+            if (nextPageId == Config.INVALID_PAGE_ID) {
+                return null;
+            }
+
             Page page = bufferManager.fetchPage(nextPageId);
             if (page == null) {
                 // abort this transaction
@@ -95,10 +98,6 @@ public class SeqScanExecutor extends Executor {
             curPageId = nextPageId;
             nextPageId = tablePage.getNextPageId();
 //            System.out.println("tupleCount: " + tupleCount + ", nextPageId: " + nextPageId);
-            if (nextPageId == Config.INVALID_PAGE_ID) {
-                tablePage.readUnlatch();
-                return null;
-            }
             curIndex = 0;
             curCount = 0;
             tablePage.readUnlatch();
@@ -109,7 +108,7 @@ public class SeqScanExecutor extends Executor {
         curIndex++;
         Tuple res = table.getTuple(recordID, txn);
         // TODO: unlock temporarily lie here
-        lockManager.unlock(txn, recordID);
+//        lockManager.unlock(txn, recordID);
         return res;
     }
 }

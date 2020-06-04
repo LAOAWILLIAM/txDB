@@ -4,8 +4,10 @@ import txDB.buffer.BufferManager;
 import txDB.concurrency.LockManager;
 import txDB.concurrency.Transaction;
 import txDB.concurrency.TransactionManager;
+import txDB.execution.executors.JoinExecutor;
 import txDB.execution.executors.PredEvalExecutor;
 import txDB.execution.executors.SeqScanExecutor;
+import txDB.execution.plans.JoinPlan;
 import txDB.execution.plans.Plan;
 import txDB.execution.plans.PredEvalPlan;
 import txDB.execution.plans.SeqScanPlan;
@@ -16,6 +18,8 @@ import txDB.storage.table.Tuple;
 import txDB.type.Type;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 
 import org.junit.Test;
@@ -36,7 +40,7 @@ public class ExecutionTest {
 
     @Test
     public void seqScanTest() throws InterruptedException {
-        int bufferSize = 10;
+        int bufferSize = 1000;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
         Transaction txn0 = transactionManager.begin();
 
@@ -57,10 +61,15 @@ public class ExecutionTest {
          */
         Tuple tuple;
         int i = 0;
+        Instant start = Instant.now();
         while ((tuple = seqScanExecutor.next()) != null) {
             assertEquals(tuple.getValue(scheme, 1), new Integer(i * 3 + 2));
             i++;
         }
+        Instant end = Instant.now();
+        Duration timeElapsed = Duration.between(start, end);
+        System.out.println("Time elapsed: " + timeElapsed.toMillis());
+        assertEquals(10000, i);
 
         columns.clear();
         Column col3 = new Column("col3", Type.ColumnValueType.INTEGER, 4, 0);
@@ -77,10 +86,32 @@ public class ExecutionTest {
          * select * from table1;
          */
         i = 0;
+        start = Instant.now();
         while ((tuple = seqScanExecutor.next()) != null) {
             assertEquals(tuple.getValue(scheme, 1), new Integer(i * 3 + 2));
             i += 15;
         }
+        end = Instant.now();
+        timeElapsed = Duration.between(start, end);
+        System.out.println("Time elapsed: " + timeElapsed.toMillis());
+        assertEquals(7500, i);
+
+        seqScanPlan = new SeqScanPlan(new ArrayList<>(), "table2");
+        seqScanExecutor = new SeqScanExecutor(seqScanPlan, diskManager, bufferManager, lockManager, null, txn0);
+
+        /**
+         * select * from table2;
+         */
+        i = 0;
+        start = Instant.now();
+        while ((tuple = seqScanExecutor.next()) != null) {
+            assertEquals(tuple.getValue(scheme, 1), new Integer(i * 3 + 2));
+            i += 15;
+        }
+        end = Instant.now();
+        timeElapsed = Duration.between(start, end);
+        System.out.println("Time elapsed: " + timeElapsed.toMillis());
+        assertEquals(1500, i);
     }
 
     @Test
@@ -236,17 +267,126 @@ public class ExecutionTest {
             i++;
             if (i == 500) i = 5000;
         }
-        assertEquals(i, 9947);
+        assertEquals(i, 10000);
 
         diskManager.close();
     }
 
     @Test
-    public void joinTest() {
-        int bufferSize = 10;
+    public void twoTablejoinTest() throws InterruptedException {
+        int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
         Transaction txn0 = transactionManager.begin();
 
+        ArrayList<Column> columns = new ArrayList<>();
+        Column col0 = new Column("col0", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col1 = new Column("col1", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col2 = new Column("col2", Type.ColumnValueType.INTEGER, 4, 0);
+        columns.add(col0);
+        columns.add(col1);
+        columns.add(col2);
+        Scheme scheme0 = new Scheme(columns);
 
+        col0 = new Column("col0", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col3 = new Column("col3", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col4 = new Column("col4", Type.ColumnValueType.INTEGER, 4, 0);
+        columns.clear();
+        columns.add(col0);
+        columns.add(col3);
+        columns.add(col4);
+        Scheme scheme1 = new Scheme(columns);
+
+        ArrayList<Scheme> schemes = new ArrayList<>();
+        schemes.add(scheme1);
+        schemes.add(scheme0);
+
+        SeqScanPlan seqScanPlan0 = new SeqScanPlan(new ArrayList<>(), "table0");
+        SeqScanPlan seqScanPlan1 = new SeqScanPlan(new ArrayList<>(), "table1");
+        ArrayList<Plan> childrenPlanNodes = new ArrayList<>();
+        childrenPlanNodes.add(seqScanPlan1);
+        childrenPlanNodes.add(seqScanPlan0);
+        ArrayList<String> columnNames = new ArrayList<>();
+        columnNames.add("col0");
+        columnNames.add("col0");
+
+        JoinPlan joinPlan = new JoinPlan(childrenPlanNodes, schemes, columnNames);
+        JoinExecutor<Integer> joinExecutor = new JoinExecutor<>(joinPlan, diskManager, bufferManager, lockManager, null, txn0);
+
+        Tuple tuple;
+        int i = 0;
+        Instant start = Instant.now();
+        while ((tuple = joinExecutor.next()) != null) {
+            if (!tuple.isAllocated()) continue;
+            assertEquals(tuple.getValue(scheme1, 0), new Integer(i * 3 + 1));
+            i += 15;
+        }
+        Instant end = Instant.now();
+        Duration timeElapsed = Duration.between(start, end);
+        System.out.println("Time elapsed: " + timeElapsed.toMillis());
+        assertEquals(i, 7500);
+    }
+
+    @Test
+    public void threeTableJoinTest() throws InterruptedException {
+        int bufferSize = 1000;
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        Transaction txn0 = transactionManager.begin();
+
+        ArrayList<Column> columns = new ArrayList<>();
+        Column col0 = new Column("col0", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col1 = new Column("col1", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col2 = new Column("col2", Type.ColumnValueType.INTEGER, 4, 0);
+        columns.add(col0);
+        columns.add(col1);
+        columns.add(col2);
+        Scheme scheme0 = new Scheme(columns);
+
+        col0 = new Column("col0", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col3 = new Column("col3", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col4 = new Column("col4", Type.ColumnValueType.INTEGER, 4, 0);
+        columns.clear();
+        columns.add(col0);
+        columns.add(col3);
+        columns.add(col4);
+        Scheme scheme1 = new Scheme(columns);
+
+        ArrayList<Scheme> schemes = new ArrayList<>();
+        schemes.add(scheme1);
+        schemes.add(scheme0);
+
+        SeqScanPlan seqScanPlan0 = new SeqScanPlan(new ArrayList<>(), "table0");
+        SeqScanPlan seqScanPlan1 = new SeqScanPlan(new ArrayList<>(), "table1");
+        SeqScanPlan seqScanPlan2 = new SeqScanPlan(new ArrayList<>(), "table2");
+
+        ArrayList<String> columnNames = new ArrayList<>();
+        columnNames.add("col0");
+        columnNames.add("col0");
+
+        ArrayList<Plan> childrenPlanNodes1 = new ArrayList<>();
+        childrenPlanNodes1.add(seqScanPlan1);
+        childrenPlanNodes1.add(seqScanPlan0);
+
+        JoinPlan joinPlan1 = new JoinPlan(childrenPlanNodes1, schemes, columnNames);
+
+        ArrayList<Plan> childrenPlanNodes0 = new ArrayList<>();
+        childrenPlanNodes0.add(seqScanPlan2);
+        childrenPlanNodes0.add(joinPlan1);
+
+        JoinPlan joinPlan0 = new JoinPlan(childrenPlanNodes0, schemes, columnNames);
+
+        JoinExecutor<Integer> joinExecutor = new JoinExecutor<>(joinPlan0, diskManager, bufferManager, lockManager, null, txn0);
+
+        Tuple tuple;
+        int i = 0;
+        Instant start = Instant.now();
+        while ((tuple = joinExecutor.next()) != null) {
+            if (!tuple.isAllocated()) continue;
+            assertEquals(tuple.getValue(scheme1, 0), new Integer(i * 3 + 1));
+            i += 15;
+        }
+        Instant end = Instant.now();
+        Duration timeElapsed = Duration.between(start, end);
+        System.out.println("Time elapsed: " + timeElapsed.toMillis());
+        assertEquals(i, 1500);
     }
 }

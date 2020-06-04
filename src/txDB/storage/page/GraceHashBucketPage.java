@@ -22,7 +22,6 @@ public class GraceHashBucketPage<K extends Comparable<K>, V> implements Serializ
         this.maxSize = maxSize;
         this.keyList = new ArrayList<>(maxSize);
         this.valueList = new ArrayList<>(maxSize);
-
     }
 
     public int getPageId() {
@@ -37,8 +36,13 @@ public class GraceHashBucketPage<K extends Comparable<K>, V> implements Serializ
         this.nextPageId = nextPageId;
     }
 
+    public int getMaxSize() {
+        return maxSize;
+    }
+
     public boolean insert(K key, V value) {
-        if (keyList.size() > maxSize) {
+//        System.out.println(key.toString() + ": " + keyList.size());
+        if (keyList.size() + 1 > maxSize) {
             return false;
         } else {
             keyList.add(key);

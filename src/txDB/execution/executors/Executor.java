@@ -9,7 +9,7 @@ import txDB.storage.disk.DiskManager;
 import txDB.storage.table.Tuple;
 
 public class Executor {
-    // TODO
+    // TODO: Parallel access methods shall be introduced, e.g., current overhead of sequential scan is high !!!
     protected DiskManager diskManager;
     protected BufferManager bufferManager;
     protected LockManager lockManager;
@@ -32,7 +32,7 @@ public class Executor {
         return null;
     }
 
-    protected Executor newExecutor(Plan plan) {
+    protected Executor newExecutor(Plan plan) throws InterruptedException {
         if (plan.getPlanType() == Plan.planType.SEQSCAN) {
             return new SeqScanExecutor((SeqScanPlan) plan, diskManager, bufferManager, lockManager, null, txn);
         } else if (plan.getPlanType() == Plan.planType.PREDEVAL) {

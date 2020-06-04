@@ -263,7 +263,7 @@ public class TableTest {
             values.add(i * 3 + 3);
             tuple = new Tuple(values, scheme);
             assertTrue(table.insertTuple(tuple, recordID, txn0));
-//            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
+//            System.out.println(i + ", " + recordID.getPageId() + ", " + recordID.getTupleIndex());
             res = table.getTuple(recordID, txn0);
             assertNotNull(res);
             assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));
@@ -368,7 +368,7 @@ public class TableTest {
         Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.fetchPage(0);
-        String relationName = "table1";
+        String relationName = "table2";
 
         /**
          * here I do a simulation: create table table1;
@@ -402,9 +402,9 @@ public class TableTest {
 //                System.out.println(bos.toByteArray().length);
                 bufferManager.unpinPage(page0.getPageId(), true);
                 bufferManager.flushPage(page0.getPageId());
-                return;
             } else {
                 System.out.println(relationName + " already created");
+                return;
             }
 
             Table table = new Table(bufferManager, lockManager, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
@@ -413,14 +413,14 @@ public class TableTest {
             ArrayList<Object> values = new ArrayList<>();
             Tuple tuple, res;
             int i;
-            for (i = 0; i < 7500; i += 15) {
+            for (i = 0; i < 1500; i += 15) {
                 values.clear();
                 values.add(i * 3 + 1);
                 values.add(i * 3 + 2);
                 values.add(i * 3 + 3);
                 tuple = new Tuple(values, scheme);
                 assertTrue(table.insertTuple(tuple, recordID, txn0));
-    //            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
+//                System.out.println(i + ", " + recordID.getPageId() + ", " + recordID.getTupleIndex());
                 res = table.getTuple(recordID, txn0);
                 assertNotNull(res);
                 assertEquals(res.getValue(scheme, 0), new Integer(i * 3 + 1));

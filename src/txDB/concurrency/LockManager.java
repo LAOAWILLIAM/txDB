@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LockManager {
-    // TODO: deadlock discovery with deadlock detection, and lock granularity support (now only tuple supported)
+    // TODO: deadlock discovery with deadlock detection, and lock granularity support (now only tuple supported, overhead is high !!!)
     public enum twoPhaseLockType {REGULAR, STRICT}
     public enum deadlockType {PREVENTION, DETECTION}
     public enum lockType {SHARED, EXCLUSIVE}

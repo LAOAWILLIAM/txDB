@@ -26,7 +26,7 @@ public class PredEvalExecutor extends Executor {
                             BufferManager bufferManager,
                             LockManager lockManager,
                             LogManager logManager,
-                            Transaction txn) {
+                            Transaction txn) throws InterruptedException {
         super(diskManager, bufferManager, lockManager, logManager, txn);
         this.predEvalPlan = predEvalPlan;
         this.scheme = predEvalPlan.getScheme();
@@ -34,13 +34,13 @@ public class PredEvalExecutor extends Executor {
         this.initialize();
     }
 
-    public void initialize() {
+    public void initialize() throws InterruptedException {
         if (predEvalPlan.getChildrenPlanNodes().size() == 0) return;
         Plan plan = predEvalPlan.getChildrenPlanNodes().get(0);
         childExecutor = this.newExecutor(plan);
     }
 
-    public void initialize(PredEvalPlan predEvalPlan) {
+    public void initialize(PredEvalPlan predEvalPlan) throws InterruptedException {
         if (predEvalPlan.getChildrenPlanNodes().size() == 0) return;
         this.predEvalPlan = predEvalPlan;
         this.existOr = this.predEvalPlan.getLogicTypes().contains(PredEvalPlan.logicType.OR);
