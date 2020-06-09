@@ -29,7 +29,7 @@ public class ExecutionTest {
     // TODO
     String dbName = "test";
     DiskManager diskManager = new DiskManager();
-    LockManager lockManager = new LockManager(LockManager.twoPhaseLockType.REGULAR, LockManager.deadlockType.DETECTION);
+    LockManager lockManager = new LockManager(LockManager.TwoPhaseLockType.REGULAR, LockManager.DeadlockType.DETECTION);
     TransactionManager transactionManager = new TransactionManager(lockManager, null);
 
     public ExecutionTest() throws IOException {

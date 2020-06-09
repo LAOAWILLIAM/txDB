@@ -10,11 +10,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class LockManager {
     // TODO: deadlock discovery with deadlock detection, and lock granularity support (now only tuple supported, overhead is high !!!)
-    public enum twoPhaseLockType {REGULAR, STRICT}
-    public enum deadlockType {PREVENTION, DETECTION}
-    public enum lockType {SHARED, EXCLUSIVE}
-    private twoPhaseLockType tplt;
-    private deadlockType dlt;
+    public enum TwoPhaseLockType {REGULAR, STRICT}
+    public enum DeadlockType {PREVENTION, DETECTION}
+    public enum LockType {SHARED, EXCLUSIVE}
+    private TwoPhaseLockType tplt;
+    private DeadlockType dlt;
     private ExecutorService detectionExec;
     private AtomicBoolean whetherDetection;
     private DirectedGraph directedGraph;
@@ -22,13 +22,13 @@ public class LockManager {
     private ArrayList<Stack<Integer>> cycles;
     private HashMap<RecordID, LockRequestQueue> lockTable;
 
-    public LockManager(twoPhaseLockType tplt, deadlockType dlt) {
+    public LockManager(TwoPhaseLockType tplt, DeadlockType dlt) {
         this.tplt = tplt;
         this.dlt = dlt;
         this.lockTable = new HashMap<>();
         whetherDetection = new AtomicBoolean(false);
 
-        if (dlt.equals(deadlockType.DETECTION)) {
+        if (dlt.equals(DeadlockType.DETECTION)) {
             directedGraph = new DirectedGraph();
             cycles = new ArrayList<>();
             whetherDetection.set(true);
@@ -102,7 +102,7 @@ public class LockManager {
         public void findAndRemoveRequestQueue(Transaction txn, RecordID recordID) {
             for (LockRequest lockRequest : requestQueue) {
                 if (lockRequest.getTxnId() == txn.getTxnId()) {
-                    if (lockRequest.getLockType() == lockType.SHARED) {
+                    if (lockRequest.getLockType() == LockType.SHARED) {
                         if (findGrantedTransaction(txn) != -1) {
                             setShared(true);
                         } else {
@@ -123,7 +123,7 @@ public class LockManager {
             for (LockRequest lockRequest : requestQueue) {
                 if (lockRequest.getTxnId() != txn.getTxnId()) {
                     if (!lockRequest.isGranted()) {
-                        setShared(lockRequest.getLockType() == lockType.SHARED);
+                        setShared(lockRequest.getLockType() == LockType.SHARED);
                         break;
                     }
                 }
@@ -144,10 +144,10 @@ public class LockManager {
 
     private class LockRequest {
         private int txnId;
-        private lockType lockType;
+        private LockType lockType;
         private boolean granted;
 
-        public LockRequest(int txnId, lockType lockType) {
+        public LockRequest(int txnId, LockType lockType) {
             this.txnId = txnId;
             this.lockType = lockType;
             this.granted = false;
@@ -165,7 +165,7 @@ public class LockManager {
             return txnId;
         }
 
-        public lockType getLockType() {
+        public LockType getLockType() {
             return lockType;
         }
     }
@@ -180,7 +180,7 @@ public class LockManager {
     public boolean acquireSharedLock(Transaction txn, RecordID recordID) throws InterruptedException {
         // TODO
         synchronized (this) {
-            LockRequest lockRequest = new LockRequest(txn.getTxnId(), lockType.SHARED);
+            LockRequest lockRequest = new LockRequest(txn.getTxnId(), LockType.SHARED);
             if (whetherDetection.get()) {
                 addTxnNode(txn.getTxnId());
 //                System.out.println("add node: " + txn.getTxnId());
@@ -246,7 +246,7 @@ public class LockManager {
     public boolean acquireExclusiveLock(Transaction txn, RecordID recordID) throws InterruptedException {
         // TODO
         synchronized (this) {
-            LockRequest lockRequest = new LockRequest(txn.getTxnId(), lockType.EXCLUSIVE);
+            LockRequest lockRequest = new LockRequest(txn.getTxnId(), LockType.EXCLUSIVE);
             if (whetherDetection.get()) {
                 addTxnNode(txn.getTxnId());
 //                System.out.println("add node: " + txn.getTxnId());
@@ -347,7 +347,7 @@ public class LockManager {
         return cycles;
     }
 
-    public void close() {
+    public void closeDetection() {
         if (whetherDetection.get()) detectionExec.shutdown();
     }
 }

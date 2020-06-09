@@ -32,11 +32,19 @@ public class TransactionManager {
     public void commit(Transaction txn) {
         // TODO
         txn.setTransactionState(Transaction.TransactionState.COMMITTED);
+
+        if (Config.ENABLE_LOGGING) {
+            // TODO
+        }
     }
 
     public void abort(Transaction txn) {
         // TODO
         txn.setTransactionState(Transaction.TransactionState.ABORTED);
+
+        if (Config.ENABLE_LOGGING) {
+            // TODO
+        }
     }
 
     public Transaction getTransaction(int txnId) {

@@ -129,9 +129,14 @@ public class DiskManager {
 
     /**
      *
+     * @param logData
      */
-    public void writeLog() {
-        // TODO
+    public void writeLog(byte[] logData) {
+        try {
+            this.logFileWrite.write(logData);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**

@@ -14,7 +14,7 @@ public class GraceHashTest {
     // TODO
     String dbName = "hash-test";
     DiskManager diskManager = new DiskManager();
-    LockManager lockManager = new LockManager(LockManager.twoPhaseLockType.REGULAR, LockManager.deadlockType.DETECTION);
+    LockManager lockManager = new LockManager(LockManager.TwoPhaseLockType.REGULAR, LockManager.DeadlockType.DETECTION);
     TransactionManager transactionManager = new TransactionManager(lockManager, null);
 
     public GraceHashTest() throws IOException {

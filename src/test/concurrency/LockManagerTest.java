@@ -7,8 +7,6 @@ import txDB.concurrency.Transaction;
 import txDB.concurrency.TransactionManager;
 import txDB.storage.table.RecordID;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Random;
 import java.util.Stack;
 import java.util.concurrent.Callable;
@@ -26,7 +24,7 @@ public class LockManagerTest {
 
     @Test
     public void sharedAndExclusiveLockTest() throws Exception {
-        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
+        lockManager = new LockManager(TwoPhaseLockType.REGULAR, DeadlockType.DETECTION);
 
         class SharedOperation implements Callable<Boolean> {
             private Transaction txn;
@@ -104,12 +102,12 @@ public class LockManagerTest {
         // give threads some time to release lock and acquire lock
         TimeUnit.SECONDS.sleep(3);
         executorService.shutdown();
-        lockManager.close();
+        lockManager.closeDetection();
     }
 
     @Test
     public void largeSharedAndExclusiveLockSlowTransactionsTest() throws Exception {
-        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
+        lockManager = new LockManager(TwoPhaseLockType.REGULAR, DeadlockType.DETECTION);
 
         class SharedOperation implements Callable<Boolean> {
             private Transaction txn;
@@ -168,12 +166,12 @@ public class LockManagerTest {
         // give threads some time to release lock and acquire lock
         TimeUnit.SECONDS.sleep(250);
         executorService.shutdown();
-        lockManager.close();
+        lockManager.closeDetection();
     }
 
     @Test
     public void largeSharedAndExclusiveLockFastTransactionsTest() throws Exception {
-        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
+        lockManager = new LockManager(TwoPhaseLockType.REGULAR, DeadlockType.DETECTION);
 
         class SharedOperation implements Callable<Boolean> {
             private Transaction txn;
@@ -232,12 +230,12 @@ public class LockManagerTest {
         // give threads some time to release lock and acquire lock
         TimeUnit.SECONDS.sleep(25);
         executorService.shutdown();
-        lockManager.close();
+        lockManager.closeDetection();
     }
 
     @Test
     public void deadlockDetectionTest() throws Exception {
-        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
+        lockManager = new LockManager(TwoPhaseLockType.REGULAR, DeadlockType.DETECTION);
 
         class T0Operation implements Callable<Boolean> {
             private Transaction txn;
@@ -332,7 +330,7 @@ public class LockManagerTest {
         // give detector enough time to finish detecting
         TimeUnit.SECONDS.sleep(5);
         executorService.shutdown();
-        lockManager.close();
+        lockManager.closeDetection();
 
         int[] expectArray = {2, 1, 0, 2};
         Stack<Integer> actualStack = lockManager.getCycles().get(0);
@@ -343,7 +341,7 @@ public class LockManagerTest {
 
     @Test
     public void largeDeadlockDetectionTest() throws Exception {
-        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.DETECTION);
+        lockManager = new LockManager(TwoPhaseLockType.REGULAR, DeadlockType.DETECTION);
 
         class T0Operation implements Callable<Boolean> {
             private Transaction txn;
@@ -437,7 +435,7 @@ public class LockManagerTest {
         // give detector enough time to finish detecting
         TimeUnit.SECONDS.sleep(5);
         executorService.shutdown();
-        lockManager.close();
+        lockManager.closeDetection();
 
         int[] expectArray = {2, 1, 0, 2};
         Stack<Integer> actualStack = lockManager.getCycles().get(0);
@@ -448,7 +446,7 @@ public class LockManagerTest {
 
     @Test
     public void deadlockPreventionTest() throws InterruptedException {
-        lockManager = new LockManager(twoPhaseLockType.REGULAR, deadlockType.PREVENTION);
+        lockManager = new LockManager(TwoPhaseLockType.REGULAR, DeadlockType.PREVENTION);
 
         class T0Operation implements Callable<Boolean> {
             private Transaction txn;

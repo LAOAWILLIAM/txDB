@@ -6,7 +6,6 @@ import txDB.buffer.BufferManager;
 import txDB.concurrency.LockManager;
 import txDB.concurrency.Transaction;
 import txDB.concurrency.TransactionManager;
-import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.index.BPlusTreeIndex;
 import txDB.storage.page.MetaDataPage;
@@ -19,15 +18,13 @@ import static org.junit.Assert.*;
 
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 
 public class TableTest {
     // TODO
     String dbName = "test";
     DiskManager diskManager = new DiskManager();
-    LockManager lockManager = new LockManager(LockManager.twoPhaseLockType.REGULAR, LockManager.deadlockType.DETECTION);
+    LockManager lockManager = new LockManager(LockManager.TwoPhaseLockType.REGULAR, LockManager.DeadlockType.DETECTION);
     TransactionManager transactionManager = new TransactionManager(lockManager, null);
 
     public TableTest() throws IOException {
