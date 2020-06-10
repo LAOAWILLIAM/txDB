@@ -42,16 +42,15 @@ public class Table {
         return this.firstPageId;
     }
 
-    public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn) {
+    public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn) throws InterruptedException {
         if (tuple.getTupleSize() + 32 > Config.PAGE_SIZE) {
-//            System.out.println("bug 1");
             // abort this transaction
+            txn.setTransactionState(TransactionState.ABORTED);
             return false;
         }
 
         Page curPage = bufferManager.fetchPage(firstPageId);
         if (curPage == null) {
-//            System.out.println("bug 2");
             // abort this transaction
             txn.setTransactionState(TransactionState.ABORTED);
             return false;

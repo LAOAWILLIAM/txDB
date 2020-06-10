@@ -34,7 +34,7 @@ public class TableTest {
     }
 
     @Test
-    public void singlePageInsertTupleTest() {
+    public void singlePageInsertTupleTest() throws InterruptedException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
         Transaction txn0 = transactionManager.begin();
@@ -81,7 +81,7 @@ public class TableTest {
     }
 
     @Test
-    public void singlePageFillTupleTest() {
+    public void singlePageFillTupleTest() throws InterruptedException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
         Transaction txn0 = transactionManager.begin();
@@ -141,7 +141,7 @@ public class TableTest {
     }
 
     @Test
-    public void tableInsertTupleTest() {
+    public void tableInsertTupleTest() throws InterruptedException {
         int bufferSize = 3;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
         Transaction txn0 = transactionManager.begin();
@@ -302,7 +302,7 @@ public class TableTest {
      * Require a written file exists
      */
     @Test
-    public void tablePersistTest() {
+    public void tablePersistTest() throws InterruptedException {
         int bufferSize = 3;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
         Transaction txn0 = transactionManager.begin();

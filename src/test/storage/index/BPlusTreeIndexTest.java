@@ -125,7 +125,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void rootAsLeafNodeTest() throws IOException, ClassNotFoundException {
+    public void rootAsLeafNodeTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -153,7 +153,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void rootAsLeafNodeFirstSplitTest() throws IOException, ClassNotFoundException {
+    public void rootAsLeafNodeFirstSplitTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -173,7 +173,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void rootAsLeafNodeFirstSplitAndInsertTest() throws IOException, ClassNotFoundException {
+    public void rootAsLeafNodeFirstSplitAndInsertTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -202,7 +202,7 @@ public class BPlusTreeIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void internalNodeSplitTest() throws IOException, ClassNotFoundException {
+    public void internalNodeSplitTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -267,7 +267,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void insertScaleTest() throws IOException, ClassNotFoundException {
+    public void insertScaleTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 1000;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -287,7 +287,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void insertPersistScaleTest() throws IOException, ClassNotFoundException {
+    public void insertPersistScaleTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100000;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -307,7 +307,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void traverseLeafNodesTest() throws IOException, ClassNotFoundException {
+    public void traverseLeafNodesTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -366,7 +366,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void deleteWithRedistributeAndMergeTest() throws IOException, ClassNotFoundException {
+    public void deleteWithRedistributeAndMergeTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -402,7 +402,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void deleteScaleTest() throws IOException, ClassNotFoundException {
+    public void deleteScaleTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 10000;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
 
@@ -424,7 +424,7 @@ public class BPlusTreeIndexTest {
     }
 
     @Test
-    public void scanLeafNodeTest() {
+    public void scanLeafNodeTest() throws InterruptedException {
         // buffer size is at least 5 here, meaning at least 20 kb memory assigned
         int bufferSize = 5;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);

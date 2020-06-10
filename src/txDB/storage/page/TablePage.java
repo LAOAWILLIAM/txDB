@@ -6,6 +6,7 @@ import txDB.Config;
 import txDB.concurrency.LockManager;
 import txDB.concurrency.Transaction;
 import txDB.recovery.LogManager;
+import txDB.recovery.LogRecord;
 import txDB.storage.table.RecordID;
 import txDB.storage.table.Tuple;
 import txDB.concurrency.Transaction.TransactionState;
@@ -169,7 +170,7 @@ public class TablePage extends Page {
      * @param logManager
      * @return
      */
-    public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) {
+    public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
         if (getRemainingFreeSpace() < tuple.getTupleSize() + TUPLE_POINTER_SIZE) return false;
 
         int i, tupleCount = getTupleCount();
@@ -192,6 +193,8 @@ public class TablePage extends Page {
 
         if (Config.ENABLE_LOGGING) {
             // TODO
+            LogRecord logRecord = new LogRecord(txn.getTxnId(), LogRecord.LogRecordType.INSERT, recordID, tuple);
+            logManager.appendLogRecord(logRecord);
         }
 
         return true;

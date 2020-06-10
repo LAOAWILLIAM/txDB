@@ -29,6 +29,8 @@ public class DiskManager {
             res1 = dbFile.createNewFile();
             res2 = logFile.createNewFile();
         }
+//        if (!logFile.exists() || !logFile.isFile())
+//            res2 = logFile.createNewFile();
 
         if (res1) {
             System.out.println("Create " + dbName);
@@ -38,6 +40,9 @@ public class DiskManager {
         } else {
             System.out.println(dbName + " already exists");
         }
+//        if (res2) {
+//            System.out.println("Create log file for " + dbName);
+//        }
     }
 
     public void dropFile(String dbName) {
@@ -56,6 +61,11 @@ public class DiskManager {
         } else {
             System.out.println("Failed to drop " + dbName);
         }
+//        if (logFile.delete()) {
+//            System.out.println("Drop log file for " + dbName);
+//        } else {
+//            System.out.println("Failed to drop log file for " + dbName);
+//        }
     }
 
     public void useFile(String dbName) throws FileNotFoundException {
