@@ -96,7 +96,7 @@ public class DiskManager {
     }
 
     /**
-     *
+     * read page from corresponding offset based on pageId
      * @param pageId
      * @return
      */
@@ -115,7 +115,7 @@ public class DiskManager {
     }
 
     /**
-     *
+     * write page to corresponding offset based on pageId
      * @param pageId
      * @param pageData
      */
@@ -131,14 +131,22 @@ public class DiskManager {
     }
 
     /**
-     *
+     * sequence read when reading the log file
      */
-    public void readLog() {
-        // TODO
+    public byte[] readLog(int size, int offset) {
+        ByteBuffer logData = ByteBuffer.allocate(size);
+        try {
+            if (this.logFileRead.getChannel().read(logData, offset) != -1)
+                return logData.array();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     /**
-     *
+     * append to the end of the log file
      * @param logData
      */
     public void writeLog(byte[] logData) {

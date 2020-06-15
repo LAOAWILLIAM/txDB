@@ -1,6 +1,7 @@
 package test.recovery;
 
 import org.junit.Test;
+import txDB.Config;
 import txDB.buffer.BufferManager;
 import txDB.concurrency.LockManager;
 import txDB.concurrency.Transaction;
@@ -14,6 +15,7 @@ import txDB.storage.table.*;
 import txDB.type.Type;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 import static org.junit.Assert.*;
@@ -22,25 +24,22 @@ public class LogManagerTest {
     // TODO
     String dbName = "test";
     DiskManager diskManager = new DiskManager();
-    LockManager lockManager = new LockManager(LockManager.TwoPhaseLockType.REGULAR, LockManager.DeadlockType.DETECTION);
-    LogManager logManager;
-    TransactionManager transactionManager;
+    LockManager lockManager = new LockManager(LockManager.TwoPhaseLockType.REGULAR, LockManager.DeadlockType.PREVENTION);
+    LogManager logManager = new LogManager(diskManager);
+    TransactionManager transactionManager = new TransactionManager(lockManager, logManager);
 
     public LogManagerTest() throws IOException {
         diskManager.dropFile(dbName);
         diskManager.createFile(dbName);
         diskManager.useFile(dbName);
-
-        logManager = new LogManager(diskManager);
-        transactionManager = new TransactionManager(lockManager, logManager);
     }
 
     @Test
     public void runtimeLogTest() throws InterruptedException {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
-        Transaction txn0 = transactionManager.begin();
         logManager.startPeriodicalFlush();
+        Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
         assertNotNull(page0);
@@ -96,5 +95,28 @@ public class LogManagerTest {
         transactionManager.commit(txn0);
 
         logManager.closePeriodicalFlush();
+
+        int offset = 0, index = 0;
+        byte[] logBytes;
+        ByteBuffer logBuffer;
+        while ((logBytes = diskManager.readLog(Config.LOG_SIZE, offset)) != null) {
+            logBuffer = ByteBuffer.wrap(logBytes);
+            while (logBuffer.getInt(index) != 0) {
+//                System.out.println(logBuffer.getInt(index + 4) + ", " +
+//                        logBuffer.getInt(index + 8) + ", " +
+//                        logBuffer.get(index + 12) + ", " +
+//                        logBuffer.get(index + 16));
+                if (logBuffer.get(index + 16) == 73) {
+//                    System.out.println(logBuffer.getInt(index + 24) + ", " +
+//                            logBuffer.getInt(index + 28));
+                }
+
+                index += logBuffer.getInt(index);
+            }
+            index = 0;
+            offset += Config.LOG_SIZE;
+        }
+
+        diskManager.close();
     }
 }

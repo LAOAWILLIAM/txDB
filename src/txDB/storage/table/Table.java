@@ -25,7 +25,7 @@ public class Table {
     }
 
     // first page does not exist
-    public Table(BufferManager bufferManager, LockManager lockManager, LogManager logManager, Transaction txn) {
+    public Table(BufferManager bufferManager, LockManager lockManager, LogManager logManager, Transaction txn) throws InterruptedException {
         this.bufferManager = bufferManager;
         this.lockManager = lockManager;
         this.logManager = logManager;
@@ -117,5 +117,11 @@ public class Table {
         tablePage.readUnlatch();
         bufferManager.unpinPage(recordID.getPageId(), false);
         return res;
+    }
+
+    public boolean updateTuple() {
+        // TODO
+
+        return false;
     }
 }

@@ -1,5 +1,6 @@
 package txDB.concurrency;
 
+import txDB.Config;
 import txDB.storage.page.Page;
 import txDB.storage.table.RecordID;
 
@@ -11,6 +12,7 @@ public class Transaction {
     // TODO
     public enum TransactionState {GROWING, SHRINKING, COMMITTED, ABORTED, RESTARTED}
     private int txnId;
+    private int prevLsn;
     private TransactionState transactionState;
     private Queue<Page> indexPageQueue;         // index page latched
     private HashSet<RecordID> sharedLockSet;    // tuple shared locked
@@ -18,6 +20,7 @@ public class Transaction {
 
     public Transaction(int txnId) {
         this.txnId = txnId;
+        this.prevLsn = Config.INVALID_LSN;
         this.transactionState = TransactionState.GROWING;
         this.indexPageQueue = new LinkedList<>();
         this.sharedLockSet = new HashSet<>();
@@ -62,5 +65,13 @@ public class Transaction {
 
     public boolean isRecordExclusiveLocked(RecordID recordID) {
         return exclusiveLockSet.contains(recordID);
+    }
+
+    public int getPrevLsn() {
+        return prevLsn;
+    }
+
+    public void setPrevLsn(int prevLsn) {
+        this.prevLsn = prevLsn;
     }
 }

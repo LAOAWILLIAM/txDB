@@ -54,7 +54,15 @@ public class TablePage extends Page {
         setDirty(page.getIsDirty());
     }
 
-    public void initialize(int pageId, int pageSize, int prevPageId, LogManager logManager, Transaction txn) {
+    public void initialize(int pageId, int pageSize, int prevPageId, LogManager logManager, Transaction txn) throws InterruptedException {
+        if (Config.ENABLE_LOGGING) {
+            // TODO: log record
+//            LogRecord logRecord = new LogRecord();
+//            int lsn = logManager.appendLogRecord(logRecord, false);
+//            setLsn(lsn);
+//            txn.setPrevLsn(lsn);
+        }
+
         setTablePageId(pageId);
         setPrevPageId(prevPageId);
         setNextPageId(Config.INVALID_PAGE_ID);
@@ -162,7 +170,7 @@ public class TablePage extends Page {
     }
 
     /**
-     *
+     * Insert a tuple
      * @param tuple
      * @param recordID
      * @param txn
@@ -193,20 +201,44 @@ public class TablePage extends Page {
 
         if (Config.ENABLE_LOGGING) {
             // TODO
-            LogRecord logRecord = new LogRecord(txn.getTxnId(), LogRecord.LogRecordType.INSERT, recordID, tuple);
-            logManager.appendLogRecord(logRecord);
+            assert lockManager.acquireExclusiveLock(txn, recordID);
+            LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.INSERT, recordID, tuple);
+            int lsn = logManager.appendLogRecord(logRecord, false);
+            txn.setPrevLsn(lsn);
         }
 
         return true;
     }
 
     /**
-     *
+     * Update a tuple
+     * @param newTuple
+     * @param oldTuple
      * @param recordID
+     * @param txn
+     * @param lockManager
+     * @param logManager
      * @return
      */
-    public boolean updateTuple(RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) {
+    public boolean updateTuple(Tuple newTuple, Tuple oldTuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) {
         // TODO
+        int tupleIndex = recordID.getTupleIndex();
+        if (tupleIndex >= getTupleCount()) {
+            if (Config.ENABLE_LOGGING) {
+                txn.setTransactionState(TransactionState.ABORTED);
+            }
+            return false;
+        }
+
+        int tupleSize = getTupleSize(tupleIndex);
+
+        if (getRemainingFreeSpace() + tupleSize < newTuple.getTupleSize()) {
+            return false;
+        }
+
+
+
+
         return false;
     }
 

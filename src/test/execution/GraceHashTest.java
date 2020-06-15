@@ -37,6 +37,8 @@ public class GraceHashTest {
         }
 
         bufferManager.flushAllPages();
+        diskManager.close();
+        lockManager.closeDetection();
     }
 
     @Test

@@ -83,7 +83,6 @@ public class MetaDataPageTest {
             e.printStackTrace();
         } finally {
             diskManager.close();
-
             diskManager.dropFile(dbName);
         }
     }

@@ -15,6 +15,7 @@ public class LogRecord implements Serializable {
     private LogRecordType logRecordType = LogRecordType.INVALID;
     private int txnId = Config.INVALID_TXN_ID;
     private int lsn = Config.INVALID_LSN;
+    private int prevLsn = Config.INVALID_LSN;
     private ByteBuffer logRecordBuffer = ByteBuffer.allocate(128);
 
     private RecordID recordID;
@@ -25,16 +26,18 @@ public class LogRecord implements Serializable {
      * @param txnId
      * @param logRecordType
      */
-    public LogRecord(int txnId, LogRecordType logRecordType) {
+    public LogRecord(int prevLsn, int txnId, LogRecordType logRecordType) {
+        this.prevLsn = prevLsn;
         this.txnId = txnId;
         this.logRecordType = logRecordType;
-        logSize = 20;
+        logSize = 24;
 
         logRecordBuffer.putInt(0, logSize);
-        logRecordBuffer.putInt(8, txnId);
+        logRecordBuffer.putInt(8, prevLsn);
+        logRecordBuffer.putInt(12, txnId);
         int i = 0;
         for (byte v: logRecordType.name().getBytes()) {
-            logRecordBuffer.put(12 + i, v);
+            logRecordBuffer.put(16 + i, v);
             i++;
         }
     }
@@ -46,35 +49,66 @@ public class LogRecord implements Serializable {
      * @param recordID
      * @param tuple
      */
-    public LogRecord(int txnId, LogRecordType logRecordType, RecordID recordID, Tuple tuple) {
+    public LogRecord(int prevLsn, int txnId, LogRecordType logRecordType, RecordID recordID, Tuple tuple) {
+        this.prevLsn = prevLsn;
         this.txnId = txnId;
         this.logRecordType = logRecordType;
         this.recordID = recordID;
         this.tuple = tuple;
 
-        logRecordBuffer.putInt(8, txnId);
+        logRecordBuffer.putInt(8, prevLsn);
+        logRecordBuffer.putInt(12, txnId);
         int i = 0;
         for (byte v: logRecordType.name().getBytes()) {
-            logRecordBuffer.put(12 + i, v);
+            logRecordBuffer.put(16 + i, v);
             i++;
         }
-        logRecordBuffer.putInt(20, recordID.getPageId());
-        logRecordBuffer.putInt(24, recordID.getTupleIndex());
+        logRecordBuffer.putInt(24, recordID.getPageId());
+        logRecordBuffer.putInt(28, recordID.getTupleIndex());
         i = 0;
         // TODO: length of tuple data should be checked
         for (byte v: tuple.getTupleData()) {
-            logRecordBuffer.put(28 + i, v);
+            logRecordBuffer.put(32 + i, v);
             i++;
         }
-        logSize = 28 + i;
+        logSize = 32 + i;
 //        System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex() + ": " + logSize);
         logRecordBuffer.putInt(0, logSize);
+    }
+
+    /**
+     * For update
+     * @param txnId
+     * @param logRecordType
+     * @param recordID
+     */
+    public LogRecord(int prevLsn, int txnId, LogRecordType logRecordType, RecordID recordID) {
+        this.prevLsn = prevLsn;
+        this.txnId = txnId;
+        this.logRecordType = logRecordType;
+        this.recordID = recordID;
+
+        logRecordBuffer.putInt(8, prevLsn);
+        logRecordBuffer.putInt(12, txnId);
+        int i = 0;
+        for (byte v: logRecordType.name().getBytes()) {
+            logRecordBuffer.put(16 + i, v);
+            i++;
+        }
     }
 
     public LogRecord() {}
 
     public int getTxnId() {
         return txnId;
+    }
+
+    public int getPrevLsn() {
+        return prevLsn;
+    }
+
+    public void setPrevLsn(int prevLsn) {
+        this.prevLsn = prevLsn;
     }
 
     public int getLogSize() {
@@ -85,12 +119,12 @@ public class LogRecord implements Serializable {
         return logRecordType;
     }
 
-    public int getLsn() {
-        return lsn;
-    }
-
     public ByteBuffer getLogRecordBuffer() {
         return logRecordBuffer;
+    }
+
+    public int getLsn() {
+        return lsn;
     }
 
     public void setLsn(int lsn) {
@@ -103,7 +137,8 @@ public class LogRecord implements Serializable {
     public String toString() {
         return "Log:[size: " + logRecordBuffer.getInt(0)
                 + ", lsn: " + logRecordBuffer.getInt(4)
-                + ", txnId: " + logRecordBuffer.getInt(8)
+                + ", prevLsn: " + logRecordBuffer.getInt(8)
+                + ", txnId: " + logRecordBuffer.getInt(12)
                 + ", pos: " + logRecordBuffer.position() + "]";
     }
 }

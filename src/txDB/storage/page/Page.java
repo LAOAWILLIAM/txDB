@@ -13,6 +13,7 @@ public class Page {
     private boolean isDirty;
     private int pinCount;
     private byte[] pageData;
+    private int lsn;
     private ReadWriteLock readWriteLatch;
     private Lock readLatch;
     private Lock writeLatch;
@@ -22,6 +23,7 @@ public class Page {
         this.pageData = new byte[Config.PAGE_SIZE];
         this.isDirty = false;
         this.pinCount = 0;
+        this.lsn = Config.INVALID_LSN;
         this.readWriteLatch = new ReentrantReadWriteLock();
         this.readLatch = readWriteLatch.readLock();
         this.writeLatch = readWriteLatch.writeLock();
@@ -93,5 +95,13 @@ public class Page {
 
     public void writeUnlatch() {
         writeLatch.unlock();
+    }
+
+    public int getLsn() {
+        return lsn;
+    }
+
+    public void setLsn(int lsn) {
+        this.lsn = lsn;
     }
 }

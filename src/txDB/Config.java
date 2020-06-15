@@ -11,7 +11,7 @@ public class Config {
     public static final int INVALID_PAGE_ID = -1;
     public static final int INVALID_LSN = -1;
     public static final int INVALID_TXN_ID = -1;
-    public static final boolean ENABLE_LOGGING = true;
+    public static boolean ENABLE_LOGGING;
 
     public Config() {}
 }

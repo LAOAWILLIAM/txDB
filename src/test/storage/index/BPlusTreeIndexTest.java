@@ -7,6 +7,7 @@ import txDB.Config;
 import txDB.buffer.BufferManager;
 import txDB.concurrency.Transaction;
 import txDB.concurrency.TransactionManager;
+import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.index.BPlusTreeIndex;
 import txDB.storage.index.BPlusTreeIndex;
@@ -29,7 +30,8 @@ import java.util.concurrent.TimeUnit;
 public class BPlusTreeIndexTest {
     String dbName = "test";
     DiskManager diskManager = new DiskManager();
-    TransactionManager transactionManager = new TransactionManager(null, null);
+    LogManager logManager = new LogManager(diskManager);
+    TransactionManager transactionManager = new TransactionManager(null, logManager);
 
     public BPlusTreeIndexTest() throws IOException {
         diskManager.dropFile(dbName);
@@ -76,7 +78,6 @@ public class BPlusTreeIndexTest {
         }
 
         diskManager.close();
-
         diskManager.dropFile(dbName);
     }
 
@@ -119,7 +120,6 @@ public class BPlusTreeIndexTest {
         }
 
         diskManager.close();
-
         diskManager.dropFile(dbName);
     }
 
@@ -147,7 +147,6 @@ public class BPlusTreeIndexTest {
         }
 
         diskManager.close();
-
         diskManager.dropFile(dbName);
     }
 
@@ -168,7 +167,6 @@ public class BPlusTreeIndexTest {
         assertEquals(bpti.find(13, txn0), new Integer(102));
 
         diskManager.close();
-
         diskManager.dropFile(dbName);
     }
 
@@ -196,7 +194,6 @@ public class BPlusTreeIndexTest {
         assertEquals(bpti.find(10, txn0), new Integer(105));
 
         diskManager.close();
-
         diskManager.dropFile(dbName);
     }
 
@@ -262,7 +259,6 @@ public class BPlusTreeIndexTest {
         bufferManager.flushAllPages();
 
         diskManager.close();
-
         diskManager.dropFile(dbName);
     }
 
@@ -304,6 +300,8 @@ public class BPlusTreeIndexTest {
         for(i = 0; i < max; i++) {
             assertEquals(bpti.find(i, txn0), new Integer(i));
         }
+
+        diskManager.close();
     }
 
     @Test
@@ -363,6 +361,8 @@ public class BPlusTreeIndexTest {
         assertEquals(bpti.find(100, txn0), new Integer(116));
 
 //        bpti.traverseLeafNodes(120);
+
+        diskManager.close();
     }
 
     @Test
@@ -399,6 +399,8 @@ public class BPlusTreeIndexTest {
         assertEquals(bpti.find(30, txn0), new Integer(104));
 
         bpti.traverseLeafNodes();
+
+        diskManager.close();
     }
 
     @Test
@@ -421,6 +423,8 @@ public class BPlusTreeIndexTest {
             if (i < max - 1)
                 assertEquals(bpti.find(i + 1, txn0), new Integer(i + 1));
         }
+
+        diskManager.close();
     }
 
     @Test
@@ -458,6 +462,8 @@ public class BPlusTreeIndexTest {
             assertEquals(value, new Integer(i));
             i++;
         }
+
+        diskManager.close();
     }
 
     @Test
@@ -564,5 +570,7 @@ public class BPlusTreeIndexTest {
         bufferManager.flushAllPages();
 
         assertEquals(bpti.find(100, txn5), new Integer(116));
+
+        diskManager.close();
     }
 }

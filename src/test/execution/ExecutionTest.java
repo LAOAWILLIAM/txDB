@@ -112,6 +112,9 @@ public class ExecutionTest {
         timeElapsed = Duration.between(start, end);
         System.out.println("Time elapsed: " + timeElapsed.toMillis());
         assertEquals(1500, i);
+
+        diskManager.close();
+        lockManager.closeDetection();
     }
 
     @Test
@@ -270,6 +273,7 @@ public class ExecutionTest {
         assertEquals(i, 10000);
 
         diskManager.close();
+        lockManager.closeDetection();
     }
 
     @Test
@@ -324,6 +328,9 @@ public class ExecutionTest {
         Duration timeElapsed = Duration.between(start, end);
         System.out.println("Time elapsed: " + timeElapsed.toMillis());
         assertEquals(i, 7500);
+
+        diskManager.close();
+        lockManager.closeDetection();
     }
 
     @Test
@@ -388,5 +395,8 @@ public class ExecutionTest {
         Duration timeElapsed = Duration.between(start, end);
         System.out.println("Time elapsed: " + timeElapsed.toMillis());
         assertEquals(i, 1500);
+
+        diskManager.close();
+        lockManager.closeDetection();
     }
 }

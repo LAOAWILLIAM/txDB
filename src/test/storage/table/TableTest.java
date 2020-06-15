@@ -75,6 +75,7 @@ public class TableTest {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            lockManager.closeDetection();
             diskManager.close();
             diskManager.dropFile(dbName);
         }
@@ -134,8 +135,8 @@ public class TableTest {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            lockManager.closeDetection();
             diskManager.close();
-
             diskManager.dropFile(dbName);
         }
     }
@@ -203,6 +204,7 @@ public class TableTest {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            lockManager.closeDetection();
             diskManager.close();
             diskManager.dropFile(dbName);
         }
@@ -293,6 +295,7 @@ public class TableTest {
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         } finally {
+            lockManager.closeDetection();
             diskManager.close();
 //            diskManager.dropFile(dbName);
         }
@@ -353,6 +356,7 @@ public class TableTest {
         } catch (IOException | ClassNotFoundException | InterruptedException e) {
             e.printStackTrace();
         } finally {
+            lockManager.closeDetection();
             diskManager.close();
 //            diskManager.dropFile(dbName);
         }
@@ -429,6 +433,9 @@ public class TableTest {
             assertEquals(bufferManager.getSize(), 0);
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
+        } finally {
+            lockManager.closeDetection();
+            diskManager.close();
         }
     }
 
@@ -541,8 +548,8 @@ public class TableTest {
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         } finally {
+            lockManager.closeDetection();
             diskManager.close();
-
 //            diskManager.dropFile(dbName);
         }
     }
@@ -551,6 +558,7 @@ public class TableTest {
     public void genericsTest() {
         Object res = getGenericsValue();
         assertEquals(res, 2);
+        diskManager.close();
     }
 
     @SuppressWarnings("unchecked")
@@ -560,6 +568,7 @@ public class TableTest {
         byteBuffer.putInt(2);
         byteBuffer.putInt(3);
         byteBuffer.putInt(4);
+        diskManager.close();
         return (T) (Object)byteBuffer.getInt(4);
     }
 }
