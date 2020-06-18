@@ -259,7 +259,7 @@ public class LockManager {
                 lockTable.put(recordID, lockRequestQueue);
                 lockRequestQueue.setShared(false);
                 txn.getExclusiveLockSet().add(recordID);
-                System.out.println("txn " + txn.getTxnId() + " get exclusive lock on tuple " + recordID.getTupleIndex());
+//                System.out.println("txn " + txn.getTxnId() + " get exclusive lock on tuple " + recordID.getTupleIndex());
                 return true;
             }
 

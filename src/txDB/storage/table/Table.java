@@ -61,7 +61,8 @@ public class Table {
 
         curTablePage.writeLatch();
         TablePage newTablePage;
-        while (!curTablePage.insertTuple(tuple, recordID, txn, lockManager, logManager)) {
+//        while (!curTablePage.insertTuple(tuple, recordID, txn, lockManager, logManager)) {
+        while (curTablePage.insertTuple(tuple, txn, lockManager, logManager) == null) {
             int nextPageId = curTablePage.getNextPageId();
             if (nextPageId != Config.INVALID_PAGE_ID) {
                 curTablePage.writeUnlatch();
@@ -119,9 +120,88 @@ public class Table {
         return res;
     }
 
-    public boolean updateTuple() {
-        // TODO
+    public RecordID insertTuple(Tuple tuple, Transaction txn) throws InterruptedException {
+        if (tuple.getTupleSize() + 32 > Config.PAGE_SIZE) {
+            // abort this transaction
+            txn.setTransactionState(TransactionState.ABORTED);
+            return null;
+        }
 
-        return false;
+        Page curPage = bufferManager.fetchPage(firstPageId);
+        if (curPage == null) {
+            // abort this transaction
+            txn.setTransactionState(TransactionState.ABORTED);
+            return null;
+        }
+
+        TablePage curTablePage = new TablePage(curPage);
+        bufferManager.replacePage(curTablePage);
+
+        curTablePage.writeLatch();
+        TablePage newTablePage;
+        RecordID recordID;
+//        while (!curTablePage.insertTuple(tuple, recordID, txn, lockManager, logManager)) {
+        while ((recordID = curTablePage.insertTuple(tuple, txn, lockManager, logManager)) == null) {
+            int nextPageId = curTablePage.getNextPageId();
+            if (nextPageId != Config.INVALID_PAGE_ID) {
+                curTablePage.writeUnlatch();
+                bufferManager.unpinPage(curTablePage.getPageId(), false);
+                Page newPage = bufferManager.fetchPage(nextPageId);
+                newPage.readLatch();
+                newTablePage = new TablePage(newPage);
+                newPage.readUnlatch();
+                newTablePage.writeLatch();
+                bufferManager.replacePage(newTablePage);
+            } else {
+                Page newPage = bufferManager.newPage();
+                if (newPage == null) {
+                    curTablePage.writeUnlatch();
+                    bufferManager.unpinPage(curTablePage.getPageId(), false);
+                    // abort this transaction
+                    txn.setTransactionState(TransactionState.ABORTED);
+                    return null;
+                }
+                newPage.readLatch();
+//                System.out.println("table new page " + newPage.getPageId());
+                newTablePage = new TablePage(newPage);
+                newPage.readUnlatch();
+                newTablePage.writeLatch();
+                bufferManager.replacePage(newTablePage);
+                curTablePage.setNextPageId(newTablePage.getPageId());
+                newTablePage.initialize(newTablePage.getPageId(), Config.PAGE_SIZE, curTablePage.getPageId(), logManager, txn);
+                curTablePage.writeUnlatch();
+                bufferManager.unpinPage(curTablePage.getPageId(), true);
+            }
+            curTablePage = newTablePage;
+        }
+        firstPageId = curTablePage.getPageId();
+        curTablePage.writeUnlatch();
+//        System.out.println("curTablePage: " + curTablePage.getTablePageId());
+        bufferManager.unpinPage(curTablePage.getPageId(), true);
+        // transaction operation here TODO
+        return recordID;
+    }
+
+    public boolean updateTuple(Tuple newTuple, RecordID recordID, Transaction txn) throws InterruptedException {
+        // TODO
+        Page page = bufferManager.fetchPage(recordID.getPageId());
+        if (page == null) {
+            // abort this transaction
+            txn.setTransactionState(TransactionState.ABORTED);
+            return false;
+        }
+
+        TablePage tablePage = new TablePage(page);
+        tablePage.writeLatch();
+        bufferManager.replacePage(tablePage);
+        boolean res = tablePage.updateTuple(newTuple, null, recordID, txn, lockManager, logManager);
+        tablePage.writeUnlatch();
+        bufferManager.unpinPage(recordID.getPageId(), res);
+
+        if (res) {
+
+        }
+
+        return res;
     }
 }

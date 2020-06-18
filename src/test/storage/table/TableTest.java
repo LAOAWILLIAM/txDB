@@ -18,6 +18,8 @@ import static org.junit.Assert.*;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 
 public class TableTest {
@@ -28,7 +30,7 @@ public class TableTest {
     TransactionManager transactionManager = new TransactionManager(lockManager, null);
 
     public TableTest() throws IOException {
-//        diskManager.dropFile(dbName);
+        diskManager.dropFile(dbName);
         diskManager.createFile(dbName);
         diskManager.useFile(dbName);
     }
@@ -441,7 +443,7 @@ public class TableTest {
 
     @Test
     public void getTupleWithIndexTest() throws IOException, ClassNotFoundException, InterruptedException {
-        int bufferSize = 10;
+        int bufferSize = 1000;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
         Transaction txn0 = transactionManager.begin();
 
@@ -463,7 +465,7 @@ public class TableTest {
         Scheme scheme = new Scheme(columns);
         String relationName = "table0";
 
-        Table table = new Table(bufferManager, null, null, txn0);
+        Table table = new Table(bufferManager, lockManager, null, txn0);
         assertEquals(table.getFirstPageId(), 1);
         RecordID recordID = new RecordID(table.getFirstPageId(), 0);
         assertNull(table.getTuple(recordID, txn0));
@@ -476,7 +478,7 @@ public class TableTest {
          * here I do a simulation: create index index0 on table0 (col0);
          */
         String indexName = "index0";
-        BPlusTreeIndex<Integer, RecordID> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100, 120);
+        BPlusTreeIndex<Integer, RecordID> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 250, 250);
         assertEquals(bpti.getRootPageId(), 2);
         ArrayList<Column> indexAttributes = new ArrayList<>();
         indexAttributes.add(col0);
@@ -493,17 +495,17 @@ public class TableTest {
         ArrayList<Object> values = new ArrayList<>();
         Tuple tuple, res;
         int i;
-//        Instant start = Instant.now();
+        Instant start = Instant.now();
 //        RecordID recordID1 = new RecordID(6, 6);
-        for (i = 0; i < 100000; i++) {
+        for (i = 0; i < 10000; i++) {
             values.clear();
             int column0 = i * 3 + 1;
             values.add(column0);
             values.add(column0 + 1);
             values.add(column0 + 2);
             tuple = new Tuple(values, scheme);
-            assertTrue(table.insertTuple(tuple, recordID, txn0));
-            bpti.insert(column0, recordID, txn0);
+//            assertNotNull(table.insertTuple(tuple, txn0));
+            bpti.insert(column0, table.insertTuple(tuple, txn0), txn0);
 //            bpti.insert(column0, recordID1);
 //            assertEquals(bpti.find(column0).getPageId(), 6);
 //            System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex());
@@ -513,9 +515,9 @@ public class TableTest {
 //            assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
 //            assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
         }
-//        Instant end = Instant.now();
-//        Duration timeElapsed = Duration.between(start, end);
-//        System.out.println("Time elapsed: " + timeElapsed.toMillis());
+        Instant end = Instant.now();
+        Duration timeElapsed = Duration.between(start, end);
+        System.out.println("Time elapsed: " + timeElapsed.toMillis());
 
 //        for (i = 0; i < 100000; i++) {
 ////                System.out.println(i);
@@ -535,11 +537,13 @@ public class TableTest {
             assertEquals(metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 2);
             assertEquals(metaDataPage.getIndexMetaData(indexName).getIndexName(), "index0");
 
-            table = new Table(bufferManager, null, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
-            bpti = new BPlusTreeIndex<>(bufferManager, metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 100, 120);
-            for (i = 0; i < 100000; i++) {
+            table = new Table(bufferManager, lockManager, null, metaDataPage.getRelationMetaData(relationName).getRootRelationPageId());
+            bpti = new BPlusTreeIndex<>(bufferManager, metaDataPage.getIndexMetaData(indexName).getRootIndexPageId(), 250, 250);
+            for (i = 0; i < 10000; i++) {
 //                System.out.println(i);
-                assertEquals(table.getTuple(bpti.find(i * 3 + 1, txn0), txn0).getValue(scheme, 1), new Integer(i * 3 + 2));
+                recordID = bpti.find(i * 3 + 1, txn0);
+                assertNotNull(recordID);
+                assertEquals(table.getTuple(recordID, txn0).getValue(scheme, 1), new Integer(i * 3 + 2));
             }
 //            assertEquals(table.getTuple(bpti.find(3001), null).getValue(scheme, 1), new Integer(3002));
 //            assertEquals(table.getTuple(bpti.find(18001), null).getValue(scheme, 1), new Integer(18002));
@@ -552,6 +556,89 @@ public class TableTest {
             diskManager.close();
 //            diskManager.dropFile(dbName);
         }
+    }
+
+    @Test
+    public void varcharTest() throws InterruptedException {
+        int bufferSize = 100;
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        Transaction txn0 = transactionManager.begin();
+
+        Page page0 = bufferManager.newPage();
+        assertNotNull(page0);
+        assertEquals(page0.getPageId(), 0);
+
+        /**
+         * here I do a simulation: create table table0;
+         */
+        MetaDataPage metaDataPage = new MetaDataPage();
+        ArrayList<Column> columns = new ArrayList<>();
+        Column col0 = new Column("col0", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col1 = new Column("col1", Type.ColumnValueType.INTEGER, 4, 0);
+        Column col2 = new Column("col2", Type.ColumnValueType.VARCHAR, 0, 0);
+        Column col3 = new Column("col3", Type.ColumnValueType.VARCHAR, 0, 0);
+        columns.add(col0);
+        columns.add(col1);
+        columns.add(col2);
+        columns.add(col3);
+        Scheme scheme = new Scheme(columns);
+        String relationName = "table0";
+
+        Table table = new Table(bufferManager, lockManager, null, txn0);
+        RecordID recordID = new RecordID(table.getFirstPageId(), 0);
+        assertNull(table.getTuple(recordID, txn0));
+
+        MetaDataPage.RelationMetaData relationMetaData =
+                metaDataPage.new RelationMetaData(scheme, relationName, table.getFirstPageId());
+        metaDataPage.addRelationMetaData(relationName, relationMetaData);
+
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutput out = new ObjectOutputStream(bos);
+            out.writeObject(metaDataPage);
+            page0.setPageData(bos.toByteArray());
+            bufferManager.unpinPage(page0.getPageId(), true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        ArrayList<Object> values = new ArrayList<>();
+        ArrayList<Integer> unLinedValueLens = new ArrayList<>();
+        Tuple tuple, res;
+        String val2, val3;
+        int i;
+        for (i = 0; i < 10000; i++) {
+            values.clear();
+            values.add(i * 3 + 1);
+            values.add(i * 3 + 2);
+            val2 = "hello " + i;
+            val3 = "hello world " + i;
+            values.add(val2);
+            values.add(val3);
+            unLinedValueLens.clear();
+            unLinedValueLens.add(val2.length());
+            unLinedValueLens.add(val3.length());
+            tuple = new Tuple(values, scheme, unLinedValueLens);
+//            assertTrue(table.insertTuple(tuple, recordID, txn0));
+            recordID = table.insertTuple(tuple, txn0);
+            assertNotNull(recordID);
+//            System.out.println(i + ", " + recordID.getPageId() + ", " + recordID.getTupleIndex());
+            res = table.getTuple(recordID, txn0);
+            assertNotNull(res);
+            assertEquals(new Integer(i * 3 + 1), res.getValue(scheme, 0));
+            assertEquals(new Integer(i * 3 + 2), res.getValue(scheme, 1));
+            assertEquals( "hello " + i, res.getValue(scheme, 2));
+            assertEquals( "hello world " + i, res.getValue(scheme, 3));
+        }
+
+        bufferManager.flushAllPages();
+        assertEquals(bufferManager.getSize(), 0);
+
+        page0 = bufferManager.fetchPage(0);
+        assertNotNull(page0);
+
+        lockManager.closeDetection();
+        diskManager.close();
     }
 
     @Test

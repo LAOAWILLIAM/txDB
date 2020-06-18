@@ -49,7 +49,7 @@ public class TransactionManager {
 
         if (Config.ENABLE_LOGGING) {
             LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.COMMIT);
-            int lsn = logManager.appendLogRecord(logRecord, true);
+            int lsn = logManager.appendLogRecord(logRecord, false);
             txn.setPrevLsn(lsn);
         }
     }

@@ -86,7 +86,7 @@ public class BPlusTreeIndexTest {
     public void maxDegreeDetermineTest() {
         try {
             Column col0 = new Column("col0", Type.ColumnValueType.INTEGER, 4, 0);
-            BPlusTreeInnerPageNode<Integer, RecordID> bPlusTreeInnerPageNode = new BPlusTreeInnerPageNode<>(16, 1, 2, 0, 0, 100);
+            BPlusTreeInnerPageNode<Integer, RecordID> bPlusTreeInnerPageNode = new BPlusTreeInnerPageNode<>(-1, 1, 2, 0, 0, 100);
 
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ObjectOutput out = new ObjectOutputStream(bos);
@@ -94,27 +94,30 @@ public class BPlusTreeIndexTest {
             byte[] pageData = bos.toByteArray();
             System.out.println("pageData length: " + pageData.length);
 
-            bPlusTreeInnerPageNode.insertAndSort(66, 3);
-            bos.reset();
-            out = new ObjectOutputStream(bos);
-            out.writeObject(bPlusTreeInnerPageNode);
-            pageData = bos.toByteArray();
-            System.out.println("pageData length: " + pageData.length);
+            for (int i = 0; i < 300; i++) {
+                bPlusTreeInnerPageNode.insertAndSort(i, 3);
+                bos.reset();
+                out = new ObjectOutputStream(bos);
+                out.writeObject(bPlusTreeInnerPageNode);
+                pageData = bos.toByteArray();
+                System.out.println("pageData length: " + pageData.length);
+            }
 
-            BPlusTreeLeafPageNode<Integer, RecordID> bPlusTreeLeafPageNode = new BPlusTreeLeafPageNode<>(16, new RecordID(7, 0), 1, 0, 100);
-            bos.reset();
-            out = new ObjectOutputStream(bos);
-            out.writeObject(bPlusTreeLeafPageNode);
-            pageData = bos.toByteArray();
-            System.out.println("pageData length: " + pageData.length);
-
-            bPlusTreeLeafPageNode.insertAndSort(17, new RecordID(7, 1));
+            BPlusTreeLeafPageNode<Integer, RecordID> bPlusTreeLeafPageNode = new BPlusTreeLeafPageNode<>(-1, new RecordID(7, 0), 1, 0, 100);
             bos.reset();
             out = new ObjectOutputStream(bos);
             out.writeObject(bPlusTreeLeafPageNode);
             pageData = bos.toByteArray();
             System.out.println("pageData length: " + pageData.length);
 
+            for (int i = 0; i < 300; i++) {
+                bPlusTreeLeafPageNode.insertAndSort(i, new RecordID(7, 1));
+                bos.reset();
+                out = new ObjectOutputStream(bos);
+                out.writeObject(bPlusTreeLeafPageNode);
+                pageData = bos.toByteArray();
+                System.out.println("pageData length: " + pageData.length);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }

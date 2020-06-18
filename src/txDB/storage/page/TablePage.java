@@ -176,7 +176,7 @@ public class TablePage extends Page {
      * @param txn
      * @param lockManager
      * @param logManager
-     * @return
+     * @return boolean
      */
     public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
         if (getRemainingFreeSpace() < tuple.getTupleSize() + TUPLE_POINTER_SIZE) return false;
@@ -205,9 +205,53 @@ public class TablePage extends Page {
             LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.INSERT, recordID, tuple);
             int lsn = logManager.appendLogRecord(logRecord, false);
             txn.setPrevLsn(lsn);
+            setLsn(lsn);
         }
 
         return true;
+    }
+
+    /**
+     * Insert a tuple, improve performance of bulk insertion
+     * @param tuple
+     * @param txn
+     * @param lockManager
+     * @param logManager
+     * @return RecordID
+     * @throws InterruptedException
+     */
+    public RecordID insertTuple(Tuple tuple, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
+        if (getRemainingFreeSpace() < tuple.getTupleSize() + TUPLE_POINTER_SIZE) return null;
+
+        int i, tupleCount = getTupleCount();
+        for (i = 0; i < tupleCount; i++) {
+            if (getTupleSize(i) == 0) break;
+        }
+
+        if (i == getTupleCount() && getRemainingFreeSpace() < tuple.getTupleSize() + TUPLE_POINTER_SIZE) {
+            return null;
+        }
+
+        setFreeSpacePointer(getFreeSpacePointer() - tuple.getTupleSize());
+        setTupleData(tuple.getTupleData(), getFreeSpacePointer(), tuple.getTupleSize());
+
+        setTupleOffset(i, getFreeSpacePointer());
+        setTupleSize(i, tuple.getTupleSize());
+
+        RecordID recordID = new RecordID(getTablePageId(), i);
+        if (i == getTupleCount()) setTupleCount(getTupleCount() + 1);
+
+        if (Config.ENABLE_LOGGING) {
+            // TODO
+            assert lockManager.acquireExclusiveLock(txn, recordID);
+            LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.INSERT, recordID, tuple);
+            int lsn = logManager.appendLogRecord(logRecord, false);
+            txn.setPrevLsn(lsn);
+            setLsn(lsn);
+            lockManager.unlock(txn, recordID);
+        }
+
+        return recordID;
     }
 
     /**
@@ -220,7 +264,7 @@ public class TablePage extends Page {
      * @param logManager
      * @return
      */
-    public boolean updateTuple(Tuple newTuple, Tuple oldTuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) {
+    public boolean updateTuple(Tuple newTuple, Tuple oldTuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
         // TODO
         int tupleIndex = recordID.getTupleIndex();
         if (tupleIndex >= getTupleCount()) {
@@ -237,9 +281,16 @@ public class TablePage extends Page {
         }
 
 
+        if (Config.ENABLE_LOGGING) {
+            LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.UPDATE, recordID);
+            int lsn = logManager.appendLogRecord(logRecord, false);
+            txn.setPrevLsn(lsn);
+            setLsn(lsn);
+        }
 
 
-        return false;
+
+        return true;
     }
 
     /**

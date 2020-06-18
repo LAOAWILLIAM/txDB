@@ -20,14 +20,32 @@ public class Tuple {
 
     public Tuple() {}
 
+    // tuple without unlined columns
     public Tuple(ArrayList<Object> values, Scheme scheme) {
         this.tupleSize = scheme.getLen();
-        // TODO: variable length should also be considered
         this.tupleData = new byte[this.tupleSize];
         int i;
         for (i = 0; i < scheme.getColumnCount(); i++) {
-            // TODO: variable attribute should also be considered
-            this.serialize(tupleData, scheme.getColumn(i), values.get(i));
+            this.serialize(tupleData, scheme.getColumn(i), values.get(i), -1, -1);
+        }
+    }
+
+    // tuple with unlined columns
+    public Tuple(ArrayList<Object> values, Scheme scheme, ArrayList<Integer> unlinedValueLens) {
+        this.tupleSize = scheme.getLen();
+        int i, curOffset = scheme.getLen();
+        for (i = 0; i < unlinedValueLens.size(); i++) {
+            tupleSize += unlinedValueLens.get(i) + 4;
+        }
+        this.tupleData = new byte[this.tupleSize];
+        for (i = 0; i < scheme.getColumnCount(); i++) {
+            Column column = scheme.getColumn(i);
+            if (!column.isInlined()) {
+                this.serialize(tupleData, column, values.get(i), unlinedValueLens.get(i - scheme.getInlinedColumnCount()), curOffset);
+                curOffset += unlinedValueLens.get(i - scheme.getInlinedColumnCount()) + 4;
+            } else {
+                this.serialize(tupleData, column, values.get(i), -1, -1);
+            }
         }
     }
 
@@ -74,7 +92,8 @@ public class Tuple {
     public <T> T getValue(Scheme scheme, int columnIndex) {
         Type.ColumnValueType columnValueType = scheme.getColumn(columnIndex).getColumnValueType();
         byte[] tupleDataPtr = getTupleDataPtr(scheme, columnIndex);
-        return (T) this.deserialize(tupleDataPtr, columnValueType);
+//        System.out.println(Arrays.toString(tupleDataPtr));
+        return (T) this.deserialize(tupleDataPtr, columnValueType, columnIndex, scheme.getInlinedColumnCount(), scheme.getColumnCount());
     }
 
     private byte[] getTupleDataPtr(Scheme scheme, int columnIndex) {
@@ -82,8 +101,9 @@ public class Tuple {
         boolean isInlined = column.isInlined();
         if (isInlined) {
             return Arrays.copyOfRange(this.tupleData, column.getColumnOffset(), this.tupleSize);
+        } else {
+            return Arrays.copyOfRange(this.tupleData, scheme.getLen(), this.tupleSize);
         }
-        return null;
     }
 
     /**
@@ -92,7 +112,7 @@ public class Tuple {
      * @param column
      * @param value
      */
-    private void serialize(byte[] tupleData, Column column, Object value) {
+    private void serialize(byte[] tupleData, Column column, Object value, int unlinedValueLen, int curOffset) {
         ByteBuffer byteBuffer = ByteBuffer.wrap(tupleData);
         switch (column.getColumnValueType()) {
             case BOOLEAN:
@@ -114,10 +134,17 @@ public class Tuple {
                 byteBuffer.putDouble(column.getColumnOffset(), (double) value);
                 return;
             case TIMESTAMP:
-                byteBuffer.put(tupleData, column.getColumnOffset(), 8);
+                // TODO
                 return;
             case VARCHAR:
                 // TODO
+//                StringBuilder stringBuilder = new StringBuilder(value.toString());
+                byteBuffer.putInt(curOffset, unlinedValueLen);
+                curOffset += 4;
+                byte[] val = value.toString().getBytes();
+                for (int i = 0; i < val.length; i++) {
+                    byteBuffer.put(curOffset + i, val[i]);
+                }
                 return;
             default:
                 break;
@@ -131,7 +158,7 @@ public class Tuple {
      * @param columnValueType
      * @return
      */
-    private Object deserialize(byte[] tupleDataPtr, Type.ColumnValueType columnValueType) {
+    private Object deserialize(byte[] tupleDataPtr, Type.ColumnValueType columnValueType, int columnIndex, int inLinedColumnSize, int columnSize) {
         ByteBuffer byteBuffer = ByteBuffer.wrap(tupleDataPtr);
         switch (columnValueType) {
             case BOOLEAN:
@@ -148,10 +175,26 @@ public class Tuple {
             case DECIMAL:
                 return byteBuffer.getDouble();
             case TIMESTAMP:
+                // TODO
                 return byteBuffer.get(tupleDataPtr, 0, 8);
             case VARCHAR:
                 // TODO: length of VARCHAR should be here.
-                return byteBuffer.get(tupleDataPtr, 0, 0);
+                int i = inLinedColumnSize, offset = 0;
+                for (; i < columnSize; i++) {
+                    int varCharLen = byteBuffer.getInt(offset);
+                    offset += 4;
+                    if (columnIndex == i) {
+                        byte[] varChar = new byte[varCharLen];
+                        for (int j = 0; j < varCharLen; j++) {
+                            varChar[j] = byteBuffer.get(offset + j);
+                        }
+//                        String str = new String(varChar);
+//                        System.out.println(str);
+                        return new String(varChar);
+                    }
+                    offset += varCharLen;
+                }
+                return null;
             default:
                 break;
         }

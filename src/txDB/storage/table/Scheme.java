@@ -7,21 +7,22 @@ import java.util.ListIterator;
 public class Scheme implements Serializable {
     private int len;
     private ArrayList<Column> columns;
-    private ArrayList<Column> uninlinedColumns;
+    private ArrayList<Column> unlinedColumns;
 
     public Scheme(ArrayList<Column> columns_) {
         // TODO
         columns = new ArrayList<>();
-        uninlinedColumns = new ArrayList<>();
+        unlinedColumns = new ArrayList<>();
         int curOffset = 0, i;
         for (i = 0; i < columns_.size(); i++) {
             Column column = columns_.get(i);
             if (column != null) {
                 if (!column.isInlined()) {
-                    this.uninlinedColumns.add(column);
+                    this.unlinedColumns.add(column);
+                } else {
+                    column.setColumnOffset(curOffset);
+                    curOffset += column.getFixedLen();
                 }
-                column.setColumnOffset(curOffset);
-                curOffset += column.getFixedLen();
                 this.columns.add(column);
             }
         }
@@ -36,12 +37,20 @@ public class Scheme implements Serializable {
         return this.columns;
     }
 
-    public ArrayList<Column> getUninlinedColumns() {
-        return this.uninlinedColumns;
+    public ArrayList<Column> getUnlinedColumns() {
+        return this.unlinedColumns;
     }
 
     public int getColumnCount() {
         return this.columns.size();
+    }
+
+    public int getUnlinedColumnCount() {
+        return this.unlinedColumns.size();
+    }
+
+    public int getInlinedColumnCount() {
+        return this.columns.size() - this.unlinedColumns.size();
     }
 
     public Column getColumn(int columnIndex) {

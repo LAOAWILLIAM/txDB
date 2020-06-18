@@ -16,6 +16,8 @@ import txDB.type.Type;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 
 import static org.junit.Assert.*;
@@ -80,7 +82,8 @@ public class LogManagerTest {
         ArrayList<Object> values = new ArrayList<>();
         Tuple tuple;
         int i;
-        for (i = 0; i < 10000; i++) {
+        Instant start = Instant.now();
+        for (i = 0; i < 25000; i++) {
             values.clear();
             values.add(i * 3 + 1);
             values.add(i * 3 + 2);
@@ -89,10 +92,14 @@ public class LogManagerTest {
             assertTrue(table.insertTuple(tuple, recordID, txn0));
         }
 
+        transactionManager.commit(txn0);
+
+        Instant end = Instant.now();
+        Duration timeElapsed = Duration.between(start, end);
+        System.out.println("Time elapsed: " + timeElapsed.toMillis());
+
         bufferManager.flushAllPages();
         assertEquals(bufferManager.getSize(), 0);
-
-        transactionManager.commit(txn0);
 
         logManager.closePeriodicalFlush();
 
