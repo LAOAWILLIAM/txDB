@@ -319,7 +319,7 @@ public class LockManager {
 //            System.out.println("txn " + txn.getTxnId() + " release lock");
             LockRequestQueue lockRequestQueue = lockTable.get(recordID);
             lockRequestQueue.findAndRemoveRequestQueue(txn, recordID);
-            removeTxnNode(txn.getTxnId());
+            if (whetherDetection.get()) removeTxnNode(txn.getTxnId());
 //            System.out.println("remove node: " + txn.getTxnId());
             notifyAll();
 

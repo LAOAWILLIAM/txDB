@@ -1,6 +1,7 @@
 package txDB.storage.page;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 import txDB.Config;
 import txDB.concurrency.LockManager;
@@ -243,12 +244,12 @@ public class TablePage extends Page {
 
         if (Config.ENABLE_LOGGING) {
             // TODO
-            assert lockManager.acquireExclusiveLock(txn, recordID);
+//            assert lockManager.acquireExclusiveLock(txn, recordID);
             LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.INSERT, recordID, tuple);
             int lsn = logManager.appendLogRecord(logRecord, false);
             txn.setPrevLsn(lsn);
             setLsn(lsn);
-            lockManager.unlock(txn, recordID);
+//            lockManager.unlock(txn, recordID);
         }
 
         return recordID;
@@ -257,14 +258,13 @@ public class TablePage extends Page {
     /**
      * Update a tuple
      * @param newTuple
-     * @param oldTuple
      * @param recordID
      * @param txn
      * @param lockManager
      * @param logManager
      * @return
      */
-    public boolean updateTuple(Tuple newTuple, Tuple oldTuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
+    public boolean updateTuple(Tuple newTuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
         // TODO
         int tupleIndex = recordID.getTupleIndex();
         if (tupleIndex >= getTupleCount()) {
@@ -280,17 +280,54 @@ public class TablePage extends Page {
             return false;
         }
 
+        int tupleOffset = getTupleOffset(tupleIndex);
+
+        // copy old tuple data
+        Tuple oldTuple = new Tuple();
+        oldTuple.setRecordID(recordID);
+        oldTuple.setTupleSize(tupleSize);
+        oldTuple.setTupleData(Arrays.copyOfRange(getPageData(), tupleOffset, tupleOffset + tupleSize));
+        oldTuple.setAllocated(true);
 
         if (Config.ENABLE_LOGGING) {
-            LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.UPDATE, recordID);
+            LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.UPDATE, recordID, oldTuple, newTuple);
             int lsn = logManager.appendLogRecord(logRecord, false);
             txn.setPrevLsn(lsn);
             setLsn(lsn);
         }
 
+        int freeSpacePointer = getFreeSpacePointer();
 
+        spaceMove(freeSpacePointer + tupleSize - newTuple.getTupleSize(), freeSpacePointer, tupleOffset - freeSpacePointer);
+        setFreeSpacePointer(freeSpacePointer + tupleSize - newTuple.getTupleSize());
+        spaceCpy(tupleOffset + tupleSize - newTuple.getTupleSize(), newTuple.getTupleData(), newTuple.getTupleSize());
+        setTupleSize(tupleIndex, newTuple.getTupleSize());
+
+        int i, tupleIOffset;
+        for (i = 0; i < getTupleCount(); i++) {
+            tupleIOffset = getTupleOffset(i);
+            if (getTupleSize(i) > 0 && tupleIOffset < tupleOffset + tupleSize) {
+                setTupleOffset(i, tupleIOffset + tupleSize - newTuple.getTupleSize());
+            }
+        }
 
         return true;
+    }
+
+    private void spaceCpy(int dest, byte[] data, int length) {
+        ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
+        int i;
+        for (i = 0; i < length; i++) {
+            pageBuffer.put(dest + i, data[i]);
+        }
+    }
+
+    private void spaceMove(int dest, int src, int length) {
+        ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
+        int i;
+        for (i = 0; i < length; i++) {
+            pageBuffer.put(dest + i, pageBuffer.get(src + i));
+        }
     }
 
     /**
@@ -329,7 +366,6 @@ public class TablePage extends Page {
     public void setTupleCount(int tupleCount) {
         ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
         pageBuffer.putInt(TUPLE_COUNT_OFFSET, tupleCount);
-        this.setPageData(pageBuffer.array());
     }
 
     /**
@@ -348,7 +384,6 @@ public class TablePage extends Page {
     private void setTupleOffset(int tupleIndex, int offset) {
         ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
         pageBuffer.putInt(TUPLE_OFFSET_START_OFFSET + tupleIndex * TUPLE_POINTER_SIZE, offset);
-        this.setPageData(pageBuffer.array());
     }
 
     /**
@@ -367,7 +402,6 @@ public class TablePage extends Page {
     private void setTupleSize(int tupleIndex, int tupleSize) {
         ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
         pageBuffer.putInt(TUPLE_SIZE_START_OFFSET + tupleIndex * TUPLE_POINTER_SIZE, tupleSize);
-        this.setPageData(pageBuffer.array());
     }
 
     /**
@@ -386,7 +420,7 @@ public class TablePage extends Page {
     public void setFreeSpacePointer(int freeSpacePointer) {
         ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
         pageBuffer.putInt(FREE_SPACE_POINTER_OFFSET, freeSpacePointer);
-        this.setPageData(pageBuffer.array());
+//        this.setPageData(pageBuffer.array());
     }
 
     private void setTupleData(byte[] tupleData, int offset, int length) {
@@ -395,7 +429,6 @@ public class TablePage extends Page {
         for (i = 0; i < length; i++) {
             pageBuffer.put(offset + i, tupleData[i]);
         }
-        this.setPageData(pageBuffer.array());
     }
 
     private int getRemainingFreeSpace() {

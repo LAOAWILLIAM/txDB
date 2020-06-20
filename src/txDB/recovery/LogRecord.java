@@ -82,7 +82,7 @@ public class LogRecord implements Serializable {
      * @param logRecordType
      * @param recordID
      */
-    public LogRecord(int prevLsn, int txnId, LogRecordType logRecordType, RecordID recordID) {
+    public LogRecord(int prevLsn, int txnId, LogRecordType logRecordType, RecordID recordID, Tuple oldTuple, Tuple newTuple) {
         this.prevLsn = prevLsn;
         this.txnId = txnId;
         this.logRecordType = logRecordType;
@@ -95,6 +95,19 @@ public class LogRecord implements Serializable {
             logRecordBuffer.put(16 + i, v);
             i++;
         }
+        logRecordBuffer.putInt(24, recordID.getPageId());
+        logRecordBuffer.putInt(28, recordID.getTupleIndex());
+        logRecordBuffer.putInt(32, oldTuple.getTupleSize());
+        for (i = 0; i < oldTuple.getTupleSize(); i++) {
+            logRecordBuffer.put(36 + i, oldTuple.getTupleData()[i]);
+        }
+        logRecordBuffer.putInt(36 + oldTuple.getTupleSize(), newTuple.getTupleSize());
+        for (i = 0; i < newTuple.getTupleSize(); i++) {
+            logRecordBuffer.put(40 + oldTuple.getTupleSize() + i, newTuple.getTupleData()[i]);
+        }
+        logSize = 40 + oldTuple.getTupleSize() + i;
+//        System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex() + ": " + logSize);
+        logRecordBuffer.putInt(0, logSize);
     }
 
     public LogRecord() {}
@@ -139,6 +152,7 @@ public class LogRecord implements Serializable {
                 + ", lsn: " + logRecordBuffer.getInt(4)
                 + ", prevLsn: " + logRecordBuffer.getInt(8)
                 + ", txnId: " + logRecordBuffer.getInt(12)
+                + ", type: " + logRecordBuffer.get(16)
                 + ", pos: " + logRecordBuffer.position() + "]";
     }
 }

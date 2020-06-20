@@ -194,7 +194,7 @@ public class Table {
         TablePage tablePage = new TablePage(page);
         tablePage.writeLatch();
         bufferManager.replacePage(tablePage);
-        boolean res = tablePage.updateTuple(newTuple, null, recordID, txn, lockManager, logManager);
+        boolean res = tablePage.updateTuple(newTuple, recordID, txn, lockManager, logManager);
         tablePage.writeUnlatch();
         bufferManager.unpinPage(recordID.getPageId(), res);
 
