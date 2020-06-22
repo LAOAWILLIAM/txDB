@@ -5,6 +5,7 @@ import txDB.storage.disk.DiskManager;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -104,6 +105,10 @@ public class LogManager {
                 }
 
             }
+
+//            if (logRecord.getLogRecordType() == LogRecord.LogRecordType.UPDATE) {
+//                runtimeUndoMap.put(logRecord.getLsn(), logRecord);
+//            }
 
             curLogBuffer.put(Arrays.copyOfRange(
                     logRecord.getLogRecordBuffer().array(), 0, logRecord.getLogSize()));

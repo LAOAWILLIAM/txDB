@@ -23,4 +23,12 @@ public class RecordID implements Serializable {
         this.pageId = pageId;
         this.tupleIndex = tupleIndex;
     }
+
+    @Override
+    public String toString() {
+        return "RecordID{" +
+                "pageId=" + pageId +
+                ", tupleIndex=" + tupleIndex +
+                '}';
+    }
 }

@@ -171,7 +171,7 @@ public class LockManager {
     }
 
     /**
-     *
+     * Transaction acquire shared lock
      * @param txn
      * @param recordID
      * @return
@@ -202,6 +202,7 @@ public class LockManager {
             lockRequestQueue.pushRequestQueue(lockRequest);
 
             int anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
+            if (anyGrantedTransaction == -1) lockRequestQueue.setShared(true);
 //            System.out.println("any granted txn when txn " + txn.getTxnId() + " is acquiring: " + anyGrantedTransaction + ", isShared: " + lockRequestQueue.isShared());
 
             // use different deadlock handling algorithm based on whetherDetection
@@ -237,7 +238,7 @@ public class LockManager {
     }
 
     /**
-     *
+     * Transaction acquire exclusive lock
      * @param txn
      * @param recordID
      * @return
@@ -308,7 +309,7 @@ public class LockManager {
     }
 
     /**
-     *
+     * Transaction release lock
      * @param txn
      * @param recordID
      * @return
@@ -316,11 +317,13 @@ public class LockManager {
     public boolean unlock(Transaction txn, RecordID recordID) {
         // TODO
         synchronized (this) {
-//            System.out.println("txn " + txn.getTxnId() + " release lock");
+//            System.out.println("txn " + txn.getTxnId() + " release lock on " + recordID.toString());
             LockRequestQueue lockRequestQueue = lockTable.get(recordID);
             lockRequestQueue.findAndRemoveRequestQueue(txn, recordID);
-            if (whetherDetection.get()) removeTxnNode(txn.getTxnId());
-//            System.out.println("remove node: " + txn.getTxnId());
+            if (whetherDetection.get()) {
+                removeTxnNode(txn.getTxnId());
+//                System.out.println("remove node: " + txn.getTxnId());
+            }
             notifyAll();
 
             return true;

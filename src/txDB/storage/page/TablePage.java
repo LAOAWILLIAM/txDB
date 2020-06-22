@@ -244,7 +244,7 @@ public class TablePage extends Page {
 
         if (Config.ENABLE_LOGGING) {
             // TODO
-//            assert lockManager.acquireExclusiveLock(txn, recordID);
+            assert lockManager.acquireExclusiveLock(txn, recordID);
             LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.INSERT, recordID, tuple);
             int lsn = logManager.appendLogRecord(logRecord, false);
             txn.setPrevLsn(lsn);
@@ -264,7 +264,7 @@ public class TablePage extends Page {
      * @param logManager
      * @return
      */
-    public boolean updateTuple(Tuple newTuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
+    public boolean updateTuple(Tuple newTuple, Tuple oldTuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
         // TODO
         int tupleIndex = recordID.getTupleIndex();
         if (tupleIndex >= getTupleCount()) {
@@ -283,14 +283,26 @@ public class TablePage extends Page {
         int tupleOffset = getTupleOffset(tupleIndex);
 
         // copy old tuple data
-        Tuple oldTuple = new Tuple();
+//        oldTuple = new Tuple();
         oldTuple.setRecordID(recordID);
         oldTuple.setTupleSize(tupleSize);
         oldTuple.setTupleData(Arrays.copyOfRange(getPageData(), tupleOffset, tupleOffset + tupleSize));
         oldTuple.setAllocated(true);
 
         if (Config.ENABLE_LOGGING) {
-            LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.UPDATE, recordID, oldTuple, newTuple);
+            if (txn.isRecordSharedLocked(recordID)) {
+                // TODO: share lock upgrade to exclusive lock needed
+            } else if (!txn.isRecordExclusiveLocked(recordID) && !lockManager.acquireExclusiveLock(txn, recordID)) {
+                return false;
+            }
+
+            LogRecord logRecord;
+            if (txn.getTransactionState() == TransactionState.ABORTED) {
+                logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.CLR, recordID, oldTuple, newTuple);
+            } else {
+                logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.UPDATE, recordID, oldTuple, newTuple);
+            }
+
             int lsn = logManager.appendLogRecord(logRecord, false);
             txn.setPrevLsn(lsn);
             setLsn(lsn);

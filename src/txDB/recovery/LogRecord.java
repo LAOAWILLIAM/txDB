@@ -10,7 +10,7 @@ import java.util.Arrays;
 
 public class LogRecord implements Serializable {
     // TODO
-    public enum LogRecordType {INVALID, INSERT, UPDATE, BEGIN, COMMIT, ABORT}
+    public enum LogRecordType {INVALID, INSERT, UPDATE, BEGIN, COMMIT, ABORT, CLR}
     private int logSize = 0;
     private LogRecordType logRecordType = LogRecordType.INVALID;
     private int txnId = Config.INVALID_TXN_ID;
@@ -19,7 +19,16 @@ public class LogRecord implements Serializable {
     private ByteBuffer logRecordBuffer = ByteBuffer.allocate(128);
 
     private RecordID recordID;
+
+    // For insert
     private Tuple tuple;
+
+    // For update and CLR
+    private Tuple oldTuple;
+    private Tuple newTuple;
+
+    // For CLR
+    private int undoNext = Config.INVALID_LSN;
 
     /**
      * For transaction begin/commit/abort
@@ -87,6 +96,8 @@ public class LogRecord implements Serializable {
         this.txnId = txnId;
         this.logRecordType = logRecordType;
         this.recordID = recordID;
+        this.oldTuple = oldTuple;
+        this.newTuple = newTuple;
 
         logRecordBuffer.putInt(8, prevLsn);
         logRecordBuffer.putInt(12, txnId);
@@ -106,6 +117,48 @@ public class LogRecord implements Serializable {
             logRecordBuffer.put(40 + oldTuple.getTupleSize() + i, newTuple.getTupleData()[i]);
         }
         logSize = 40 + oldTuple.getTupleSize() + i;
+//        System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex() + ": " + logSize);
+        logRecordBuffer.putInt(0, logSize);
+    }
+
+    /**
+     * For abort CLR
+     * @param prevLsn
+     * @param txnId
+     * @param logRecordType
+     * @param recordID
+     * @param oldTuple
+     * @param newTuple
+     * @param undoNext
+     */
+    public LogRecord(int prevLsn, int txnId, LogRecordType logRecordType, RecordID recordID, Tuple oldTuple, Tuple newTuple, int undoNext) {
+        this.prevLsn = prevLsn;
+        this.txnId = txnId;
+        this.logRecordType = logRecordType;
+        this.recordID = recordID;
+        this.oldTuple = oldTuple;
+        this.newTuple = newTuple;
+        this.undoNext = undoNext;
+
+        logRecordBuffer.putInt(8, prevLsn);
+        logRecordBuffer.putInt(12, txnId);
+        int i = 0;
+        for (byte v: logRecordType.name().getBytes()) {
+            logRecordBuffer.put(16 + i, v);
+            i++;
+        }
+        logRecordBuffer.putInt(24, recordID.getPageId());
+        logRecordBuffer.putInt(28, recordID.getTupleIndex());
+        logRecordBuffer.putInt(32, oldTuple.getTupleSize());
+        for (i = 0; i < oldTuple.getTupleSize(); i++) {
+            logRecordBuffer.put(36 + i, oldTuple.getTupleData()[i]);
+        }
+        logRecordBuffer.putInt(36 + oldTuple.getTupleSize(), newTuple.getTupleSize());
+        for (i = 0; i < newTuple.getTupleSize(); i++) {
+            logRecordBuffer.put(40 + oldTuple.getTupleSize() + i, newTuple.getTupleData()[i]);
+        }
+        logRecordBuffer.putInt(40 + oldTuple.getTupleSize() + i, undoNext);
+        logSize = 44 + oldTuple.getTupleSize() + i;
 //        System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex() + ": " + logSize);
         logRecordBuffer.putInt(0, logSize);
     }
@@ -146,7 +199,20 @@ public class LogRecord implements Serializable {
         logRecordBuffer.position(logSize);
     }
 
+    public RecordID getRecordID() {
+        return recordID;
+    }
+
+    public Tuple getOldTuple() {
+        return oldTuple;
+    }
+
+    public Tuple getNewTuple() {
+        return newTuple;
+    }
+
     // For test
+    @Override
     public String toString() {
         return "Log:[size: " + logRecordBuffer.getInt(0)
                 + ", lsn: " + logRecordBuffer.getInt(4)
@@ -155,4 +221,21 @@ public class LogRecord implements Serializable {
                 + ", type: " + logRecordBuffer.get(16)
                 + ", pos: " + logRecordBuffer.position() + "]";
     }
+
+//    @Override
+//    public String toString() {
+//        return "LogRecord{" +
+//                "logSize=" + logSize +
+//                ", logRecordType=" + logRecordType +
+//                ", txnId=" + txnId +
+//                ", lsn=" + lsn +
+//                ", prevLsn=" + prevLsn +
+//                ", logRecordBuffer=" + logRecordBuffer +
+//                ", recordID=" + recordID +
+//                ", tuple=" + tuple +
+//                ", oldTuple=" + oldTuple +
+//                ", newTuple=" + newTuple +
+//                ", undoNext=" + undoNext +
+//                '}';
+//    }
 }

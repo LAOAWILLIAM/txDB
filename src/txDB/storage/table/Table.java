@@ -42,6 +42,23 @@ public class Table {
         return this.firstPageId;
     }
 
+    public Tuple getTuple(RecordID recordID, Transaction txn) throws InterruptedException {
+        Page page = bufferManager.fetchPage(recordID.getPageId());
+        if (page == null) {
+            // abort this transaction
+            txn.setTransactionState(TransactionState.ABORTED);
+            return null;
+        }
+
+        TablePage tablePage = new TablePage(page);
+        tablePage.readLatch();
+        bufferManager.replacePage(tablePage);
+        Tuple res = tablePage.getTuple(recordID, txn, lockManager);
+        tablePage.readUnlatch();
+        bufferManager.unpinPage(recordID.getPageId(), false);
+        return res;
+    }
+
     public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn) throws InterruptedException {
         if (tuple.getTupleSize() + 32 > Config.PAGE_SIZE) {
             // abort this transaction
@@ -99,25 +116,9 @@ public class Table {
         curTablePage.writeUnlatch();
 //        System.out.println("curTablePage: " + curTablePage.getTablePageId());
         bufferManager.unpinPage(curTablePage.getPageId(), true);
-        // transaction operation here TODO
+        // transaction operation here
+        txn.pushWriteRecordQueue(txn.new WriteRecord(recordID, Transaction.WriteType.INSERT, this, null, null));
         return true;
-    }
-
-    public Tuple getTuple(RecordID recordID, Transaction txn) throws InterruptedException {
-        Page page = bufferManager.fetchPage(recordID.getPageId());
-        if (page == null) {
-            // abort this transaction
-            txn.setTransactionState(TransactionState.ABORTED);
-            return null;
-        }
-
-        TablePage tablePage = new TablePage(page);
-        tablePage.readLatch();
-        bufferManager.replacePage(tablePage);
-        Tuple res = tablePage.getTuple(recordID, txn, lockManager);
-        tablePage.readUnlatch();
-        bufferManager.unpinPage(recordID.getPageId(), false);
-        return res;
     }
 
     public RecordID insertTuple(Tuple tuple, Transaction txn) throws InterruptedException {
@@ -178,7 +179,8 @@ public class Table {
         curTablePage.writeUnlatch();
 //        System.out.println("curTablePage: " + curTablePage.getTablePageId());
         bufferManager.unpinPage(curTablePage.getPageId(), true);
-        // transaction operation here TODO
+        // transaction operation here
+        txn.pushWriteRecordQueue(txn.new WriteRecord(recordID, Transaction.WriteType.INSERT, this, null, null));
         return recordID;
     }
 
@@ -194,12 +196,13 @@ public class Table {
         TablePage tablePage = new TablePage(page);
         tablePage.writeLatch();
         bufferManager.replacePage(tablePage);
-        boolean res = tablePage.updateTuple(newTuple, recordID, txn, lockManager, logManager);
+        Tuple oldTuple = new Tuple();
+        boolean res = tablePage.updateTuple(newTuple, oldTuple, recordID, txn, lockManager, logManager);
         tablePage.writeUnlatch();
         bufferManager.unpinPage(recordID.getPageId(), res);
 
-        if (res) {
-
+        if (res && txn.getTransactionState() != TransactionState.ABORTED) {
+            txn.pushWriteRecordQueue(txn.new WriteRecord(recordID, Transaction.WriteType.UPDATE, this, oldTuple, newTuple));
         }
 
         return res;
