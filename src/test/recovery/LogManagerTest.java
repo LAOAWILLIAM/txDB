@@ -193,6 +193,8 @@ public class LogManagerTest {
             unLinedValueLens.add(val3.length());
             tuple = new Tuple(values, scheme, unLinedValueLens);
             recordID = table.insertTuple(tuple, txn0);
+            assertNotNull(recordID);
+            lockManager.unlock(txn0, recordID);
 
             values.clear();
             values.add(i * 3 + 100);

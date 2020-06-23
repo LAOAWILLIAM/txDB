@@ -13,7 +13,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * This is a runtime log manager, group commit is used here
+ * This is a runtime log manager, group commit is used here;
+ * For thread coordination, please refer to relative knowledge accordingly,
+ * which is very hard and meanwhile important.
  */
 public class LogManager {
     // TODO
@@ -24,6 +26,8 @@ public class LogManager {
     private ExecutorService periodicalFlushService;
     private AtomicInteger nextLsn;
     private AtomicBoolean whetherFlush;
+    private AtomicInteger lastLsn;
+    private AtomicInteger flushedLsn;
 
     /**
      *
@@ -36,6 +40,8 @@ public class LogManager {
         this.diskManager = diskManager;
         // TODO: lsn should be persisted on disk
         nextLsn = new AtomicInteger(0);
+        lastLsn = new AtomicInteger(Config.INVALID_LSN);
+        flushedLsn = new AtomicInteger(Config.INVALID_LSN);
 
         whetherFlush = new AtomicBoolean(false);
         periodicalFlushService = Executors.newSingleThreadExecutor();
@@ -46,24 +52,38 @@ public class LogManager {
      *
      */
     private class periodicalFlush implements Runnable {
+        private final LogManager logManager;
+
+        public periodicalFlush(LogManager logManager) {
+            this.logManager = logManager;
+        }
+
         @Override
         public void run() {
             System.out.println("periodical flush is on");
             while (Config.ENABLE_LOGGING && !Thread.interrupted()) {
-                // buffer full trigger
-                if (whetherFlush.get()) {
-//                    System.out.println("flush not after timeout");
-                    flushLogBuffer();
-                } else {
-                    // TODO: timeout trigger needs redesign
-                    try {
-                        TimeUnit.MICROSECONDS.sleep(500);
-//                        System.out.println("timeout");
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                synchronized (this) {
+                    // buffer full trigger
+                    if (whetherFlush.get()) {
+//                        System.out.println("flush not after timeout");
+                        _flushLogBuffer();
+                        whetherFlush.set(false);
+                        // must get lock on logManager itself here
+                        synchronized (logManager) {
+                            logManager.notify();
+                        }
+                    } else {
+                        try {
+                            TimeUnit.MICROSECONDS.sleep(500);
+//                            System.out.println("timeout");
+                            _flushLogBuffer();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
+            System.out.println("periodical flush is off");
         }
     }
 
@@ -71,8 +91,9 @@ public class LogManager {
      *
      */
     public void startPeriodicalFlush() {
+        if (Config.ENABLE_LOGGING) return;
         Config.ENABLE_LOGGING = true;
-        this.periodicalFlushService.execute(new periodicalFlush());
+        this.periodicalFlushService.execute(new periodicalFlush(this));
     }
 
     /**
@@ -84,19 +105,13 @@ public class LogManager {
      */
     public int appendLogRecord(LogRecord logRecord, boolean flushNow) throws InterruptedException {
         // TODO
-        synchronized (curLogBuffer) {
+        synchronized (this) {
             if (logRecord.getLogSize() <= 0) return -1;
             int lsn = nextLsn.getAndIncrement();
             logRecord.setLsn(lsn);
 //            System.out.println(logRecord.toString() + ", " + curLogBuffer.position());
             if (logRecord.getLogSize() > curLogBuffer.remaining()) {
-                whetherFlush.set(true);
-                curLogBuffer.notify();
-
-                while (whetherFlush.get()) {
-//                    System.out.println("waiting");
-                    curLogBuffer.wait();
-                }
+                flushLogBuffer();
 
                 if (curLogBuffer.equals(logbuffer1)) {
                     curLogBuffer = logbuffer2;
@@ -106,12 +121,10 @@ public class LogManager {
 
             }
 
-//            if (logRecord.getLogRecordType() == LogRecord.LogRecordType.UPDATE) {
-//                runtimeUndoMap.put(logRecord.getLsn(), logRecord);
-//            }
-
             curLogBuffer.put(Arrays.copyOfRange(
                     logRecord.getLogRecordBuffer().array(), 0, logRecord.getLogSize()));
+
+            lastLsn.set(lsn);
 
             if (flushNow) {
                 flushLogBuffer();
@@ -124,20 +137,28 @@ public class LogManager {
     /**
      *
      */
-    public void flushLogBuffer() {
-        synchronized (curLogBuffer) {
+    public void flushLogBuffer() throws InterruptedException {
+        synchronized (this) {
+            whetherFlush.set(true);
+            notify();
+
+            while (Config.ENABLE_LOGGING && whetherFlush.get()) {
+//                System.out.println("waiting");
+                wait();
+            }
+        }
+    }
+
+    private void _flushLogBuffer() {
+        synchronized (this) {
             if (curLogBuffer.remaining() < Config.LOG_SIZE) {
-//                System.out.println("cur pos: " + curLogBuffer.position());
-//                diskManager.writeLog(
-//                        Arrays.copyOfRange(curLogBuffer.array(), 0, curLogBuffer.position()));
                 diskManager.writeLog(curLogBuffer.array());
+                flushedLsn.set(lastLsn.get());
                 // TODO: optimization needed
                 for (int i = 0; i < curLogBuffer.limit(); i++) {
                     curLogBuffer.put(i, (byte) 0);
                 }
                 curLogBuffer.clear();
-                whetherFlush.set(false);
-                curLogBuffer.notify();
             }
         }
     }
@@ -145,9 +166,14 @@ public class LogManager {
     /**
      *
      */
-    public void closePeriodicalFlush() {
-        Config.ENABLE_LOGGING = false;
+    public void closePeriodicalFlush() throws InterruptedException {
+        if (!Config.ENABLE_LOGGING) return;
         flushLogBuffer();
+        Config.ENABLE_LOGGING = false;
         this.periodicalFlushService.shutdown();
+    }
+
+    public int getFlushedLsn() {
+        return flushedLsn.get();
     }
 }
