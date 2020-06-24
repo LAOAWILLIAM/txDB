@@ -25,7 +25,7 @@ public class Table {
     }
 
     // first page does not exist
-    public Table(BufferManager bufferManager, LockManager lockManager, LogManager logManager, Transaction txn) throws InterruptedException {
+    public Table(BufferManager bufferManager, LockManager lockManager, LogManager logManager, Transaction txn) {
         this.bufferManager = bufferManager;
         this.lockManager = lockManager;
         this.logManager = logManager;
@@ -42,7 +42,7 @@ public class Table {
         return this.firstPageId;
     }
 
-    public Tuple getTuple(RecordID recordID, Transaction txn) throws InterruptedException {
+    public Tuple getTuple(RecordID recordID, Transaction txn) {
         Page page = bufferManager.fetchPage(recordID.getPageId());
         if (page == null) {
             // abort this transaction
@@ -59,7 +59,7 @@ public class Table {
         return res;
     }
 
-    public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn) throws InterruptedException {
+    public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn) {
         if (tuple.getTupleSize() + 32 > Config.PAGE_SIZE) {
             // abort this transaction
             txn.setTransactionState(TransactionState.ABORTED);
@@ -121,7 +121,7 @@ public class Table {
         return true;
     }
 
-    public RecordID insertTuple(Tuple tuple, Transaction txn) throws InterruptedException {
+    public RecordID insertTuple(Tuple tuple, Transaction txn) {
         if (tuple.getTupleSize() + 32 > Config.PAGE_SIZE) {
             // abort this transaction
             txn.setTransactionState(TransactionState.ABORTED);
@@ -184,7 +184,7 @@ public class Table {
         return recordID;
     }
 
-    public boolean updateTuple(Tuple newTuple, RecordID recordID, Transaction txn) throws InterruptedException {
+    public boolean updateTuple(Tuple newTuple, RecordID recordID, Transaction txn) {
         // TODO
         Page page = bufferManager.fetchPage(recordID.getPageId());
         if (page == null) {

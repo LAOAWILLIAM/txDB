@@ -34,7 +34,7 @@ public class JoinExecutor<K extends Comparable<K>> extends Executor {
                         BufferManager bufferManager,
                         LockManager lockManager,
                         LogManager logManager,
-                        Transaction txn) throws InterruptedException {
+                        Transaction txn) {
         super(diskManager, bufferManager, lockManager, logManager, txn);
         this.joinPlan = joinPlan;
         this.schemes = joinPlan.getSchemes();
@@ -42,18 +42,18 @@ public class JoinExecutor<K extends Comparable<K>> extends Executor {
         this.initialize();
     }
 
-    public void initialize() throws InterruptedException {
+    public void initialize() {
         if (joinPlan.getChildrenPlanNodes().size() == 0) return;
         leftChildExecutor = this.newExecutor(joinPlan.getChildrenPlanNodes().get(0));
         rightChildExecutor = this.newExecutor(joinPlan.getChildrenPlanNodes().get(1));
         leftNext();
     }
 
-    public Tuple next() throws InterruptedException {
+    public Tuple next() {
         return rightNext();
     }
 
-    private void leftNext() throws InterruptedException {
+    private void leftNext() {
         Tuple tuple;
         int columnIndex = schemes.get(0).getColumnIndex(joinPlan.getColumnNames().get(0));
         while ((tuple = leftChildExecutor.next()) != null) {
@@ -62,7 +62,7 @@ public class JoinExecutor<K extends Comparable<K>> extends Executor {
         }
     }
 
-    private Tuple rightNext() throws InterruptedException {
+    private Tuple rightNext() {
         Tuple tuple = rightChildExecutor.next();
         int columnIndex = schemes.get(1).getColumnIndex(joinPlan.getColumnNames().get(1));
 //        System.out.println(columnIndex + ", " + tuple.getRecordID().getPageId() + ", " + tuple.getRecordID().getTupleIndex());

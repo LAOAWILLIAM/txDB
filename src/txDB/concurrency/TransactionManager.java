@@ -28,9 +28,8 @@ public class TransactionManager {
     /**
      *
      * @return
-     * @throws InterruptedException
      */
-    public Transaction begin() throws InterruptedException {
+    public Transaction begin() {
         Transaction txn = new Transaction(this.nextTxnId.getAndIncrement());
         if (Config.ENABLE_LOGGING) {
             // TODO
@@ -45,9 +44,8 @@ public class TransactionManager {
     /**
      *
      * @param txn
-     * @throws InterruptedException
      */
-    public void commit(Transaction txn) throws InterruptedException {
+    public void commit(Transaction txn) {
         // TODO
         txn.setTransactionState(Transaction.TransactionState.COMMITTED);
 
@@ -63,9 +61,8 @@ public class TransactionManager {
     /**
      * just clarify here: Abort == Rollback
      * @param txn
-     * @throws InterruptedException
      */
-    public void abort(Transaction txn) throws InterruptedException {
+    public void abort(Transaction txn) {
         // TODO
         txn.setTransactionState(Transaction.TransactionState.ABORTED);
 

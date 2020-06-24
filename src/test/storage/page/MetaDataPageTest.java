@@ -24,9 +24,9 @@ public class MetaDataPageTest {
     }
 
     @Test
-    public void createTableAndIndexTest() {
+    public void createTableAndIndexTest() throws InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, null);
 
         Page page0 = bufferManager.newPage();
         assertNotNull(page0);

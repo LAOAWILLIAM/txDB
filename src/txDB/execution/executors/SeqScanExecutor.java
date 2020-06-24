@@ -75,7 +75,7 @@ public class SeqScanExecutor extends Executor {
         }
     }
 
-    public Tuple next() throws InterruptedException {
+    public Tuple next() {
 //        System.out.println("curCount: " + curCount);
         if (curCount == tupleCount) {
             bufferManager.unpinPage(curPageId, false);

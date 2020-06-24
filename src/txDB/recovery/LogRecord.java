@@ -9,14 +9,17 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class LogRecord implements Serializable {
-    // TODO
+    /**
+     * TODO: should consider if logRecordBuffer does not have enough space
+     * one solution is to allocate enough space at the first
+     */
     public enum LogRecordType {INVALID, INSERT, UPDATE, BEGIN, COMMIT, ABORT, CLR}
     private int logSize = 0;
     private LogRecordType logRecordType = LogRecordType.INVALID;
     private int txnId = Config.INVALID_TXN_ID;
     private int lsn = Config.INVALID_LSN;
     private int prevLsn = Config.INVALID_LSN;
-    private ByteBuffer logRecordBuffer = ByteBuffer.allocate(128);
+    private ByteBuffer logRecordBuffer = ByteBuffer.allocate(256);
 
     private RecordID recordID;
 

@@ -175,9 +175,8 @@ public class LockManager {
      * @param txn
      * @param recordID
      * @return
-     * @throws InterruptedException
      */
-    public boolean acquireSharedLock(Transaction txn, RecordID recordID) throws InterruptedException {
+    public boolean acquireSharedLock(Transaction txn, RecordID recordID) {
         // TODO
         synchronized (this) {
             LockRequest lockRequest = new LockRequest(txn.getTxnId(), LockType.SHARED);
@@ -210,7 +209,11 @@ public class LockManager {
                 while (!lockRequestQueue.isShared()) {
                     addTxnEdge(txn.getTxnId(), anyGrantedTransaction);
 //                    System.out.println("txn " + txn.getTxnId() + " is waiting");
-                    wait();
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             } else {
                 // deadlock prevention using wait-die scheme
@@ -222,7 +225,11 @@ public class LockManager {
                     } else if (txn.getTxnId() < anyGrantedTransaction) {
                         while (!lockRequestQueue.isShared()) {
 //                            System.out.println("txn " + txn.getTxnId() + " is waiting");
-                            wait();
+                            try {
+                                wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
                         }
                     }
                 }
@@ -242,9 +249,8 @@ public class LockManager {
      * @param txn
      * @param recordID
      * @return
-     * @throws InterruptedException
      */
-    public boolean acquireExclusiveLock(Transaction txn, RecordID recordID) throws InterruptedException {
+    public boolean acquireExclusiveLock(Transaction txn, RecordID recordID) {
         // TODO
         synchronized (this) {
             LockRequest lockRequest = new LockRequest(txn.getTxnId(), LockType.EXCLUSIVE);
@@ -275,7 +281,11 @@ public class LockManager {
                 while (lockRequestQueue.isShared() || anyGrantedTransaction != -1) {
                     addTxnEdge(txn.getTxnId(), anyGrantedTransaction);
 //                    System.out.println("txn " + txn.getTxnId() + " is waiting");
-                    wait();
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
                 }
             } else {
@@ -288,7 +298,11 @@ public class LockManager {
                     } else if (txn.getTxnId() < anyGrantedTransaction) {
                         while (lockRequestQueue.isShared() || anyGrantedTransaction != -1) {
 //                            System.out.println("txn " + txn.getTxnId() + " is waiting");
-                            wait();
+                            try {
+                                wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
                             anyGrantedTransaction = lockRequestQueue.findGrantedTransaction(txn);
                             if (txn.getTxnId() > anyGrantedTransaction) {
                                 System.out.println("txn " + txn.getTxnId() + " aborts");

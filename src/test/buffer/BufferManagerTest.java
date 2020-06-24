@@ -23,9 +23,9 @@ public class BufferManagerTest {
     }
 
     @Test
-    public void bufferManagerTest1() {
+    public void bufferManagerTest1() throws InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, null);
 
         Page page0 = bufferManager.newPage();
         assertNotNull(page0);
@@ -66,9 +66,9 @@ public class BufferManagerTest {
     }
 
     @Test
-    public void bufferManagerTest2() {
+    public void bufferManagerTest2() throws InterruptedException {
         int bufferSize = 100000;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, null);
 
         int i;
         Page page;
@@ -100,7 +100,7 @@ public class BufferManagerTest {
     }
 
     @Test
-    public void multithreadTest() {
+    public void multithreadTest() throws InterruptedException {
         class BmThread1 extends Thread {
             private BufferManager bufferManager;
 
@@ -141,7 +141,7 @@ public class BufferManagerTest {
         }
 
         int bufferSize = 100000;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, null);
 
         int i;
         Page page;

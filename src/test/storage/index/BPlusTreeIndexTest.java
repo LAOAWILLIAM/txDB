@@ -41,9 +41,9 @@ public class BPlusTreeIndexTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void serializableTest() {
+    public void serializableTest() throws InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         Page page0 = bufferManager.newPage();
         assertNotNull(page0);
@@ -130,7 +130,7 @@ public class BPlusTreeIndexTest {
     @SuppressWarnings("unchecked")
     public void rootAsLeafNodeTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         Transaction txn0 = transactionManager.begin();
@@ -157,7 +157,7 @@ public class BPlusTreeIndexTest {
     @SuppressWarnings("unchecked")
     public void rootAsLeafNodeFirstSplitTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         Transaction txn0 = transactionManager.begin();
@@ -176,7 +176,7 @@ public class BPlusTreeIndexTest {
     @Test
     public void rootAsLeafNodeFirstSplitAndInsertTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         Transaction txn0 = transactionManager.begin();
@@ -204,7 +204,7 @@ public class BPlusTreeIndexTest {
     @SuppressWarnings("unchecked")
     public void internalNodeSplitTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         Transaction txn0 = transactionManager.begin();
@@ -268,7 +268,7 @@ public class BPlusTreeIndexTest {
     @Test
     public void insertScaleTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 1000;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100, 100);
         Transaction txn0 = transactionManager.begin();
@@ -288,7 +288,7 @@ public class BPlusTreeIndexTest {
     @Test
     public void insertPersistScaleTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100000;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 100, 100);
         Transaction txn0 = transactionManager.begin();
@@ -310,7 +310,7 @@ public class BPlusTreeIndexTest {
     @Test
     public void traverseLeafNodesTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         Transaction txn0 = transactionManager.begin();
@@ -371,7 +371,7 @@ public class BPlusTreeIndexTest {
     @Test
     public void deleteWithRedistributeAndMergeTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         Transaction txn0 = transactionManager.begin();
@@ -409,7 +409,7 @@ public class BPlusTreeIndexTest {
     @Test
     public void deleteScaleTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 10000;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 200, 200);
         Transaction txn0 = transactionManager.begin();
@@ -434,7 +434,7 @@ public class BPlusTreeIndexTest {
     public void scanLeafNodeTest() throws InterruptedException {
         // buffer size is at least 5 here, meaning at least 20 kb memory assigned
         int bufferSize = 5;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
 
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 144, 144);
         Transaction txn0 = transactionManager.begin();
@@ -529,7 +529,7 @@ public class BPlusTreeIndexTest {
         }
 
         int bufferSize = 10;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         BPlusTreeIndex<Integer, Integer> bpti = new BPlusTreeIndex<>(bufferManager, Config.INVALID_PAGE_ID, 3, 3);
         Transaction txn0 = transactionManager.begin();
         Transaction txn1 = transactionManager.begin();

@@ -5,7 +5,6 @@ import txDB.storage.disk.DiskManager;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -13,9 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * This is a runtime log manager, group commit is used here;
- * For thread coordination, please refer to relative knowledge accordingly,
- * which is very hard and meanwhile important.
+ * This is a runtime log manager, group commit is used here
  */
 public class LogManager {
     // TODO
@@ -57,7 +54,6 @@ public class LogManager {
         public periodicalFlush(LogManager logManager) {
             this.logManager = logManager;
         }
-
         @Override
         public void run() {
             System.out.println("periodical flush is on");
@@ -66,24 +62,20 @@ public class LogManager {
                     // buffer full trigger
                     if (whetherFlush.get()) {
 //                        System.out.println("flush not after timeout");
-                        _flushLogBuffer();
-                        whetherFlush.set(false);
-                        // must get lock on logManager itself here
-                        synchronized (logManager) {
-                            logManager.notify();
-                        }
+                        flushLogBuffer();
                     } else {
                         try {
                             TimeUnit.MICROSECONDS.sleep(500);
 //                            System.out.println("timeout");
-                            _flushLogBuffer();
+                            synchronized (logManager) {
+                                _flushLogBuffer();
+                            }
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                     }
                 }
             }
-            System.out.println("periodical flush is off");
         }
     }
 
@@ -101,9 +93,8 @@ public class LogManager {
      * @param logRecord
      * @param flushNow
      * @return
-     * @throws InterruptedException
      */
-    public int appendLogRecord(LogRecord logRecord, boolean flushNow) throws InterruptedException {
+    public int appendLogRecord(LogRecord logRecord, boolean flushNow) {
         // TODO
         synchronized (this) {
             if (logRecord.getLogSize() <= 0) return -1;
@@ -111,14 +102,23 @@ public class LogManager {
             logRecord.setLsn(lsn);
 //            System.out.println(logRecord.toString() + ", " + curLogBuffer.position());
             if (logRecord.getLogSize() > curLogBuffer.remaining()) {
-                flushLogBuffer();
+                whetherFlush.set(true);
+                this.notify();
+
+                while (whetherFlush.get()) {
+//                    System.out.println("waiting");
+                    try {
+                        this.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
 
                 if (curLogBuffer.equals(logbuffer1)) {
                     curLogBuffer = logbuffer2;
                 } else {
                     curLogBuffer = logbuffer1;
                 }
-
             }
 
             curLogBuffer.put(Arrays.copyOfRange(
@@ -137,39 +137,36 @@ public class LogManager {
     /**
      *
      */
-    public void flushLogBuffer() throws InterruptedException {
+    public void flushLogBuffer() {
         synchronized (this) {
-            whetherFlush.set(true);
-            notify();
-
-            while (Config.ENABLE_LOGGING && whetherFlush.get()) {
-//                System.out.println("waiting");
-                wait();
-            }
+            _flushLogBuffer();
+            whetherFlush.set(false);
+            this.notify();
         }
     }
 
     private void _flushLogBuffer() {
-        synchronized (this) {
-            if (curLogBuffer.remaining() < Config.LOG_SIZE) {
-                diskManager.writeLog(curLogBuffer.array());
-                flushedLsn.set(lastLsn.get());
-                // TODO: optimization needed
-                for (int i = 0; i < curLogBuffer.limit(); i++) {
-                    curLogBuffer.put(i, (byte) 0);
-                }
-                curLogBuffer.clear();
+        if (curLogBuffer.remaining() < Config.LOG_SIZE) {
+//            System.out.println("cur pos: " + curLogBuffer.position());
+            diskManager.writeLog(
+                    Arrays.copyOfRange(curLogBuffer.array(), 0, curLogBuffer.position()));
+//            diskManager.writeLog(curLogBuffer.array());
+            flushedLsn.set(lastLsn.get());
+            // TODO: optimization needed
+            for (int i = 0; i < curLogBuffer.limit(); i++) {
+                curLogBuffer.put(i, (byte) 0);
             }
+            curLogBuffer.clear();
         }
     }
 
     /**
      *
      */
-    public void closePeriodicalFlush() throws InterruptedException {
+    public void closePeriodicalFlush() {
         if (!Config.ENABLE_LOGGING) return;
-        flushLogBuffer();
         Config.ENABLE_LOGGING = false;
+        flushLogBuffer();
         this.periodicalFlushService.shutdown();
     }
 

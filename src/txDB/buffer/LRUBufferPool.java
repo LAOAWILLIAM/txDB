@@ -1,5 +1,7 @@
 package txDB.buffer;
 
+import txDB.Config;
+import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.page.Page;
 //import txDB.storage.page.TablePage;
@@ -14,11 +16,13 @@ public class LRUBufferPool {
     private int bufferSize;
     private int currentSize;
     private DiskManager diskManager;
+    private LogManager logManager;
 
-    public LRUBufferPool(int bufferSize, DiskManager diskManager) {
+    public LRUBufferPool(int bufferSize, DiskManager diskManager, LogManager logManager) {
         this.diskManager = diskManager;
-        this.bufferPool = new HashMap<>(bufferSize);
-        this.bufferSize = bufferSize;
+        this.logManager = logManager;
+        this.bufferPool = new HashMap<>(Config.BUFFER_SIZE);
+        this.bufferSize = Config.BUFFER_SIZE;
         this.currentSize = 0;
 
         this.head = new DLinkedNode();
@@ -31,10 +35,11 @@ public class LRUBufferPool {
         this.tail.prev = this.head;
     }
 
-    public LRUBufferPool(int bufferSize, float loadFactor, DiskManager diskManager) {
+    public LRUBufferPool(int bufferSize, float loadFactor, DiskManager diskManager, LogManager logManager) {
         this.diskManager = diskManager;
-        this.bufferPool = new HashMap<>(bufferSize, loadFactor);
-        this.bufferSize = bufferSize;
+        this.logManager = logManager;
+        this.bufferPool = new HashMap<>(Config.BUFFER_SIZE, loadFactor);
+        this.bufferSize = Config.BUFFER_SIZE;
         this.currentSize = 0;
 
         this.head = new DLinkedNode();
@@ -163,6 +168,11 @@ public class LRUBufferPool {
 //                System.out.println(evictNode.value.getPageId() + ": " + evictNode.value.getIsDirty());
                 if (evictNode.value.getIsDirty()) {
 //                    System.out.println("page " + evictNode.key + " is flushed");
+                    if (Config.ENABLE_LOGGING && logManager.getFlushedLsn() < evictNode.value.getLsn()) {
+//                        System.out.println("buffer manager wait for log flush");
+                        logManager.flushLogBuffer();
+                    }
+                    assert logManager.getFlushedLsn() >= evictNode.value.getLsn();
                     this.diskManager.writePage(evictNode.key, evictNode.value.getPageData());
                 }
                 this.removeNode(evictNode);

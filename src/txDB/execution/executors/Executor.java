@@ -28,11 +28,11 @@ public class Executor {
         this.txn = txn;
     }
 
-    protected Tuple next() throws InterruptedException {
+    protected Tuple next() {
         return null;
     }
 
-    protected Executor newExecutor(Plan plan) throws InterruptedException {
+    protected Executor newExecutor(Plan plan) {
         if (plan.getPlanType() == Plan.planType.SEQSCAN) {
             return new SeqScanExecutor((SeqScanPlan) plan, diskManager, bufferManager, lockManager, null, txn);
         } else if (plan.getPlanType() == Plan.planType.PREDEVAL) {

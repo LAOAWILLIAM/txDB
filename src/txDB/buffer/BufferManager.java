@@ -1,28 +1,29 @@
 package txDB.buffer;
 
+import txDB.Config;
+import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.page.Page;
-import txDB.storage.page.TablePage;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.ListIterator;
-import java.util.Set;
 
 public class BufferManager {
     private LRUBufferPool lruBufferPool;
     private DiskManager diskManager;
     private LinkedList<Page> freeList;
+    private LogManager logManager;
 
     /**
      *
      * @param bufferSize
      * @param diskManager
      */
-    public BufferManager(int bufferSize, DiskManager diskManager) {
-        this.lruBufferPool = new LRUBufferPool(bufferSize, diskManager);
+    public BufferManager(int bufferSize, DiskManager diskManager, LogManager logManager) {
+        this.lruBufferPool = new LRUBufferPool(bufferSize, diskManager, logManager);
         this.diskManager = diskManager;
         this.freeList = new LinkedList<>();
+        this.logManager = logManager;
     }
 
     /**
@@ -31,14 +32,15 @@ public class BufferManager {
      * @param loadFactor
      * @param diskManager
      */
-    public BufferManager(int bufferSize, float loadFactor, DiskManager diskManager) {
-        this.lruBufferPool = new LRUBufferPool(bufferSize, loadFactor, diskManager);
+    public BufferManager(int bufferSize, float loadFactor, DiskManager diskManager, LogManager logManager) {
+        this.lruBufferPool = new LRUBufferPool(bufferSize, loadFactor, diskManager, logManager);
         this.diskManager = diskManager;
         this.freeList = new LinkedList<>();
+        this.logManager = logManager;
     }
 
     /**
-     *
+     * Fetch a page
      * @param pageId
      * @return
      */
@@ -46,8 +48,14 @@ public class BufferManager {
         synchronized (this) {
             Page requestPage;
             if ((requestPage = this.lruBufferPool.get(pageId, true)) != null) {
-                if (requestPage.getIsDirty())
+                if (requestPage.getIsDirty()) {
+                    if (Config.ENABLE_LOGGING && logManager.getFlushedLsn() < requestPage.getLsn()) {
+//                        System.out.println("buffer manager wait for log flush");
+                        logManager.flushLogBuffer();
+                    }
+                    assert logManager.getFlushedLsn() >= requestPage.getLsn();
                     this.diskManager.writePage(pageId, requestPage.getPageData());
+                }
                 requestPage.incrementPinCount();
                 return requestPage;
             }
@@ -80,7 +88,7 @@ public class BufferManager {
     }
 
     /**
-     *
+     * Unpin a page
      * @param pageId
      * @param isDirty
      * @return
@@ -102,9 +110,9 @@ public class BufferManager {
     }
 
     /**
-     *
+     * New a page
      */
-    public Page newPage()  {
+    public Page newPage() {
         // Allocating next page is thread safe based on atomicInteger
         int pageId = this.diskManager.allocatePage();
 
@@ -139,7 +147,7 @@ public class BufferManager {
     }
 
     /**
-     *
+     * Especially for test
      * @param pageId
      * @return
      */
@@ -164,7 +172,7 @@ public class BufferManager {
     }
 
     /**
-     *
+     * Flush all existing pages to disk
      */
     public void flushAllPages() {
         synchronized (this) {
@@ -188,7 +196,7 @@ public class BufferManager {
     }
 
     /**
-     *
+     * Delete a page both in memory and disk
      * @param pageId
      * @return
      */

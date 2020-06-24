@@ -6,6 +6,7 @@ import txDB.buffer.BufferManager;
 import txDB.concurrency.LockManager;
 import txDB.concurrency.Transaction;
 import txDB.concurrency.TransactionManager;
+import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.index.BPlusTreeIndex;
 import txDB.storage.page.MetaDataPage;
@@ -27,7 +28,8 @@ public class TableTest {
     String dbName = "test";
     DiskManager diskManager = new DiskManager();
     LockManager lockManager = new LockManager(LockManager.TwoPhaseLockType.REGULAR, LockManager.DeadlockType.DETECTION);
-    TransactionManager transactionManager = new TransactionManager(lockManager, null);
+    LogManager logManager = new LogManager(diskManager);
+    TransactionManager transactionManager = new TransactionManager(lockManager, logManager);
 
     public TableTest() throws IOException {
         diskManager.dropFile(dbName);
@@ -36,9 +38,9 @@ public class TableTest {
     }
 
     @Test
-    public void singlePageInsertTupleTest() throws InterruptedException {
+    public void singlePageInsertTupleTest() {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
@@ -86,7 +88,7 @@ public class TableTest {
     @Test
     public void singlePageFillTupleTest() throws InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
@@ -146,7 +148,7 @@ public class TableTest {
     @Test
     public void tableInsertTupleTest() throws InterruptedException {
         int bufferSize = 3;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         try {
@@ -215,7 +217,7 @@ public class TableTest {
     @Test
     public void combineMetaDataAndTableTest() throws InterruptedException {
         int bufferSize = 3;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
@@ -309,7 +311,7 @@ public class TableTest {
     @Test
     public void tablePersistTest() throws InterruptedException {
         int bufferSize = 3;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.fetchPage(0);
@@ -355,7 +357,7 @@ public class TableTest {
                 assertEquals(res.getValue(scheme, 1), new Integer(i * 3 + 2));
                 assertEquals(res.getValue(scheme, 2), new Integer(i * 3 + 3));
             }
-        } catch (IOException | ClassNotFoundException | InterruptedException e) {
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         } finally {
             lockManager.closeDetection();
@@ -367,7 +369,7 @@ public class TableTest {
     @Test
     public void createSecondTableTest() throws InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.fetchPage(0);
@@ -444,7 +446,7 @@ public class TableTest {
     @Test
     public void getTupleWithIndexTest() throws IOException, ClassNotFoundException, InterruptedException {
         int bufferSize = 1000;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
@@ -561,7 +563,7 @@ public class TableTest {
     @Test
     public void varcharTest() throws InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
@@ -644,7 +646,7 @@ public class TableTest {
     @Test
     public void updateTest() throws InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();

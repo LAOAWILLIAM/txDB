@@ -5,6 +5,7 @@ import txDB.buffer.BufferManager;
 import txDB.concurrency.LockManager;
 import txDB.concurrency.TransactionManager;
 import txDB.execution.hash.GraceHash;
+import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.table.RecordID;
 
@@ -15,6 +16,7 @@ public class GraceHashTest {
     String dbName = "hash-test";
     DiskManager diskManager = new DiskManager();
     LockManager lockManager = new LockManager(LockManager.TwoPhaseLockType.REGULAR, LockManager.DeadlockType.DETECTION);
+    LogManager logManager = new LogManager(diskManager);
     TransactionManager transactionManager = new TransactionManager(lockManager, null);
 
     public GraceHashTest() throws IOException {
@@ -26,7 +28,7 @@ public class GraceHashTest {
     @Test
     public void graceHashInsertTest() {
         int bufferSize = 1000;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         GraceHash<Integer, RecordID> graceHash = new GraceHash<>(500, bufferManager);
 
         int i;

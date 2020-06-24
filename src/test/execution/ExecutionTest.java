@@ -11,6 +11,7 @@ import txDB.execution.plans.JoinPlan;
 import txDB.execution.plans.Plan;
 import txDB.execution.plans.PredEvalPlan;
 import txDB.execution.plans.SeqScanPlan;
+import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.table.Column;
 import txDB.storage.table.Scheme;
@@ -30,6 +31,7 @@ public class ExecutionTest {
     String dbName = "test";
     DiskManager diskManager = new DiskManager();
     LockManager lockManager = new LockManager(LockManager.TwoPhaseLockType.REGULAR, LockManager.DeadlockType.DETECTION);
+    LogManager logManager = new LogManager(diskManager);
     TransactionManager transactionManager = new TransactionManager(lockManager, null);
 
     public ExecutionTest() throws IOException {
@@ -39,9 +41,9 @@ public class ExecutionTest {
     }
 
     @Test
-    public void seqScanTest() throws InterruptedException {
+    public void seqScanTest() {
         int bufferSize = 1000;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         ArrayList<Column> columns = new ArrayList<>();
@@ -118,9 +120,9 @@ public class ExecutionTest {
     }
 
     @Test
-    public void seqScanWithPredicatesTest() throws InterruptedException {
+    public void seqScanWithPredicatesTest() {
         int bufferSize = 10;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         ArrayList<Column> columns = new ArrayList<>();
@@ -279,7 +281,7 @@ public class ExecutionTest {
     @Test
     public void twoTablejoinTest() throws InterruptedException {
         int bufferSize = 100;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         ArrayList<Column> columns = new ArrayList<>();
@@ -336,7 +338,7 @@ public class ExecutionTest {
     @Test
     public void threeTableJoinTest() throws InterruptedException {
         int bufferSize = 1000;
-        BufferManager bufferManager = new BufferManager(bufferSize, diskManager);
+        BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
         Transaction txn0 = transactionManager.begin();
 
         ArrayList<Column> columns = new ArrayList<>();

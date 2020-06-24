@@ -55,7 +55,7 @@ public class TablePage extends Page {
         setDirty(page.getIsDirty());
     }
 
-    public void initialize(int pageId, int pageSize, int prevPageId, LogManager logManager, Transaction txn) throws InterruptedException {
+    public void initialize(int pageId, int pageSize, int prevPageId, LogManager logManager, Transaction txn) {
         if (Config.ENABLE_LOGGING) {
             // TODO: log record
 //            LogRecord logRecord = new LogRecord();
@@ -133,7 +133,7 @@ public class TablePage extends Page {
      * @param recordID
      * @return
      */
-    public Tuple getTuple(RecordID recordID, Transaction txn, LockManager lockManager) throws InterruptedException {
+    public Tuple getTuple(RecordID recordID, Transaction txn, LockManager lockManager) {
         int tupleIndex = recordID.getTupleIndex();
         if (tupleIndex > getTupleCount()) {
             if (Config.ENABLE_LOGGING) {
@@ -179,7 +179,7 @@ public class TablePage extends Page {
      * @param logManager
      * @return boolean
      */
-    public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
+    public boolean insertTuple(Tuple tuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) {
         if (getRemainingFreeSpace() < tuple.getTupleSize() + TUPLE_POINTER_SIZE) return false;
 
         int i, tupleCount = getTupleCount();
@@ -219,9 +219,8 @@ public class TablePage extends Page {
      * @param lockManager
      * @param logManager
      * @return RecordID
-     * @throws InterruptedException
      */
-    public RecordID insertTuple(Tuple tuple, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
+    public RecordID insertTuple(Tuple tuple, Transaction txn, LockManager lockManager, LogManager logManager) {
         if (getRemainingFreeSpace() < tuple.getTupleSize() + TUPLE_POINTER_SIZE) return null;
 
         int i, tupleCount = getTupleCount();
@@ -264,7 +263,7 @@ public class TablePage extends Page {
      * @param logManager
      * @return
      */
-    public boolean updateTuple(Tuple newTuple, Tuple oldTuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) throws InterruptedException {
+    public boolean updateTuple(Tuple newTuple, Tuple oldTuple, RecordID recordID, Transaction txn, LockManager lockManager, LogManager logManager) {
         // TODO
         int tupleIndex = recordID.getTupleIndex();
         if (tupleIndex >= getTupleCount()) {
