@@ -151,7 +151,7 @@ public class LRUBufferPool {
             if (this.currentSize >= this.bufferSize)
                 if ((evictNode = this.victim()) == null)
                     // we do not throw RuntimeException here to keep system going
-                     throw new RuntimeException("BUFFER EXCEEDED ERROR");
+                    throw new RuntimeException("BUFFER EXCEEDED ERROR");
 //                    return false;
 
             DLinkedNode newNode = new DLinkedNode();
@@ -169,8 +169,8 @@ public class LRUBufferPool {
                 if (evictNode.value.getIsDirty()) {
 //                    System.out.println("page " + evictNode.key + " is flushed");
                     if (Config.ENABLE_LOGGING && logManager.getFlushedLsn() < evictNode.value.getLsn()) {
-//                        System.out.println("buffer manager wait for log flush");
-                        logManager.flushLogBuffer();
+                        System.out.println("buffer manager wait for log flush when evicting pages");
+                        logManager.flushLogBuffer(true);
                     }
                     assert logManager.getFlushedLsn() >= evictNode.value.getLsn();
                     this.diskManager.writePage(evictNode.key, evictNode.value.getPageData());

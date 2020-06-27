@@ -51,7 +51,7 @@ public class BufferManager {
                 if (requestPage.getIsDirty()) {
                     if (Config.ENABLE_LOGGING && logManager.getFlushedLsn() < requestPage.getLsn()) {
 //                        System.out.println("buffer manager wait for log flush");
-                        logManager.flushLogBuffer();
+                        logManager.flushLogBuffer(true);
                     }
                     assert logManager.getFlushedLsn() >= requestPage.getLsn();
                     this.diskManager.writePage(pageId, requestPage.getPageData());

@@ -7,7 +7,6 @@ import txDB.concurrency.LockManager;
 import txDB.concurrency.Transaction;
 import txDB.concurrency.TransactionManager;
 import txDB.recovery.LogManager;
-import txDB.recovery.LogRecord;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.page.MetaDataPage;
 import txDB.storage.page.Page;
@@ -38,10 +37,10 @@ public class LogManagerTest {
     }
 
     @Test
-    public void runtimeInsertLogTest() throws InterruptedException {
+    public void runtimeInsertLogTest() {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
-        logManager.startPeriodicalFlush();
+        logManager.startFlushService();
         Transaction txn0 = transactionManager.begin();
 
         Page page0 = bufferManager.newPage();
@@ -84,7 +83,7 @@ public class LogManagerTest {
         Tuple tuple;
         int i;
         Instant start = Instant.now();
-        for (i = 0; i < 100000; i++) {
+        for (i = 0; i < 10000; i++) {
             values.clear();
             values.add(i * 3 + 1);
             values.add(i * 3 + 2);
@@ -102,37 +101,57 @@ public class LogManagerTest {
         bufferManager.flushAllPages();
         assertEquals(bufferManager.getSize(), 0);
 
-        logManager.closePeriodicalFlush();
+        logManager.closeFlushService();
 
-//        int offset = 0, index = 0;
-//        byte[] logBytes;
-//        ByteBuffer logBuffer;
-//        while ((logBytes = diskManager.readLog(Config.LOG_SIZE, offset)) != null) {
-//            logBuffer = ByteBuffer.wrap(logBytes);
-//            while (logBuffer.getInt(index) != 0) {
-////                System.out.println(logBuffer.getInt(index + 4) + ", " +
-////                        logBuffer.getInt(index + 8) + ", " +
-////                        logBuffer.get(index + 12) + ", " +
-////                        logBuffer.get(index + 16));
-//                if (logBuffer.get(index + 16) == 73) {
-////                    System.out.println(logBuffer.getInt(index + 24) + ", " +
-////                            logBuffer.getInt(index + 28));
-//                }
-//
-//                index += logBuffer.getInt(index);
-//            }
-//            index = 0;
-//            offset += Config.LOG_SIZE;
-//        }
+        int offset = 0, index = 0, bufferStart = 0;
+        byte[] logBytes;
+        ByteBuffer logBuffer;
+        boolean whetherBeyond = false;
+        i = 0;
+        while ((logBytes = diskManager.readLog(Config.LOG_SIZE, offset)) != null) {
+            logBuffer = ByteBuffer.wrap(logBytes);
+            while (logBuffer.getInt(index) != 0) {
+
+                if (index + logBuffer.getInt(index) >= Config.LOG_SIZE) {
+                    whetherBeyond = true;
+                    bufferStart += index;
+                    offset = bufferStart;
+                    break;
+                }
+
+//                System.out.println(index + ", " +
+//                        logBuffer.getInt(index) + ", " +
+//                        logBuffer.getInt(index + 4) + ", " +
+//                        logBuffer.getInt(index + 8) + ", " +
+//                        logBuffer.get(index + 12) + ", " +
+//                        logBuffer.get(index + 16));
+                if (logBuffer.get(index + 16) == 73) {
+//                    System.out.println(logBuffer.getInt(index + 24) + ", " +
+//                            logBuffer.getInt(index + 28));
+
+                    // number of commit
+                    i++;
+                }
+
+                index += logBuffer.getInt(index);
+            }
+            index = 0;
+            if (!whetherBeyond) {
+                offset += Config.LOG_SIZE;
+            } else {
+                whetherBeyond = false;
+            }
+        }
+        assertEquals(10000, i);
 
         diskManager.close();
     }
 
     @Test
-    public void runtimeUpdateLogTest() throws InterruptedException {
+    public void runtimeUpdateLogTest() {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
-        logManager.startPeriodicalFlush();
+        logManager.startFlushService();
         Transaction txn0 = transactionManager.begin();
         Transaction txn1 = transactionManager.begin();
 
@@ -180,7 +199,7 @@ public class LogManagerTest {
         String val2, val3;
         int i;
         Instant start = Instant.now();
-        for (i = 0; i < 100000; i++) {
+        for (i = 0; i < 10000; i++) {
             values.clear();
             values.add(i * 3 + 1);
             values.add(i * 3 + 2);
@@ -220,54 +239,77 @@ public class LogManagerTest {
         bufferManager.flushAllPages();
         assertEquals(bufferManager.getSize(), 0);
 
-        logManager.closePeriodicalFlush();
+        logManager.closeFlushService();
 
-//        int offset = 0, index = 0;
-//        byte[] logBytes;
-//        ByteBuffer logBuffer;
-//        Tuple res;
-//        i = 0;
-//        while ((logBytes = diskManager.readLog(Config.LOG_SIZE, offset)) != null) {
-//            logBuffer = ByteBuffer.wrap(logBytes);
-//            while (logBuffer.getInt(index) != 0) {
-////                System.out.println(logBuffer.getInt(index + 4) + ", " +
-////                        logBuffer.getInt(index + 8) + ", " +
-////                        logBuffer.get(index + 12) + ", " +
-////                        logBuffer.get(index + 16));
-//                if (logBuffer.get(index + 16) == 73) {
-////                    System.out.println(logBuffer.getInt(index + 24) + ", " +
-////                            logBuffer.getInt(index + 28));
-//                } else if (logBuffer.get(index + 16) == 85) {
-////                    System.out.println(logBuffer.getInt(index + 24) + ", " +
-////                            logBuffer.getInt(index + 28));
-//                    recordID.setRecordId(logBuffer.getInt(index + 24), logBuffer.getInt(index + 28));
-//                    int logSize = logBuffer.getInt(index);
-//                    int oldTupleSize = logBuffer.getInt(index + 32);
-//                    int newTupleSize = logBuffer.getInt(index + 36 + oldTupleSize);
-////                    System.out.println(logSize + ", " + oldTupleSize + ", " + newTupleSize);
-//                    res = new Tuple(Arrays.copyOfRange(logBytes, index + 40 + oldTupleSize, index + logSize), recordID, newTupleSize, true);
-//                    assertNotNull(res);
-//                    assertEquals(new Integer(i * 3 + 100), res.getValue(scheme, 0));
-//                    assertEquals(new Integer(i * 3 + 200), res.getValue(scheme, 1));
-//                    assertEquals( "hello " + (i + 100), res.getValue(scheme, 2));
-//                    assertEquals( "hello world " + (i + 100), res.getValue(scheme, 3));
-//                    i++;
-//                }
-//
-//                index += logBuffer.getInt(index);
-//            }
-//            index = 0;
-//            offset += Config.LOG_SIZE;
-//        }
+        int offset = 0, index = 0, bufferStart = 0;
+        byte[] logBytes;
+        ByteBuffer logBuffer;
+        boolean whetherBeyond = false;
+        Tuple res;
+        i = 0;
+        int j = 0;
+        while ((logBytes = diskManager.readLog(Config.LOG_SIZE, offset)) != null) {
+            logBuffer = ByteBuffer.wrap(logBytes);
+            while (logBuffer.getInt(index) != 0) {
+
+                if (index + logBuffer.getInt(index) >= Config.LOG_SIZE) {
+                    whetherBeyond = true;
+                    bufferStart += index;
+                    offset = bufferStart;
+                    break;
+                }
+
+//                System.out.println(index + ", " +
+//                        logBuffer.getInt(index) + ", " +
+//                        logBuffer.getInt(index + 4) + ", " +
+//                        logBuffer.getInt(index + 8) + ", " +
+//                        logBuffer.get(index + 12) + ", " +
+//                        logBuffer.get(index + 16));
+                if (logBuffer.get(index + 16) == 73) {
+//                    System.out.println(logBuffer.getInt(index + 24) + ", " +
+//                            logBuffer.getInt(index + 28));
+                } else if (logBuffer.get(index + 16) == 85) {
+//                    System.out.println(logBuffer.getInt(index + 24) + ", " +
+//                            logBuffer.getInt(index + 28));
+                    recordID.setRecordId(logBuffer.getInt(index + 24), logBuffer.getInt(index + 28));
+                    int logSize = logBuffer.getInt(index);
+                    int oldTupleSize = logBuffer.getInt(index + 32);
+                    int newTupleSize = logBuffer.getInt(index + 36 + oldTupleSize);
+//                    System.out.println(logSize + ", " + oldTupleSize + ", " + newTupleSize);
+                    res = new Tuple(Arrays.copyOfRange(logBytes, index + 40 + oldTupleSize, index + logSize), recordID, newTupleSize, true);
+                    assertNotNull(res);
+                    assertEquals(new Integer(i * 3 + 100), res.getValue(scheme, 0));
+                    assertEquals(new Integer(i * 3 + 200), res.getValue(scheme, 1));
+                    assertEquals( "hello " + (i + 100), res.getValue(scheme, 2));
+                    assertEquals( "hello world " + (i + 100), res.getValue(scheme, 3));
+
+                    // number of update
+                    i++;
+                } else if (logBuffer.get(index + 16) == 67) {
+                    // number of commit
+                    j++;
+                }
+
+                index += logBuffer.getInt(index);
+            }
+            index = 0;
+            if (!whetherBeyond) {
+                offset += Config.LOG_SIZE;
+            } else {
+                whetherBeyond = false;
+            }
+        }
+        assertEquals(10000, i);
+        assertEquals(2, j);
 
         diskManager.close();
     }
 
     @Test
-    public void runtimeUpdateAbortTest() throws InterruptedException {
+    public void runtimeUpdateAbortTest() {
         int bufferSize = 100;
         BufferManager bufferManager = new BufferManager(bufferSize, diskManager, logManager);
-        logManager.startPeriodicalFlush();
+        logManager.startFlushService();
         Transaction txn0 = transactionManager.begin();
         Transaction txn1 = transactionManager.begin();
 
@@ -316,7 +358,7 @@ public class LogManagerTest {
         String val2, val3;
         int i;
         Instant start = Instant.now();
-        for (i = 0; i < 100000; i++) {
+        for (i = 0; i < 10000; i++) {
             values.clear();
             values.add(i * 3 + 1);
             values.add(i * 3 + 2);
@@ -368,58 +410,88 @@ public class LogManagerTest {
             assertEquals( "hello world " + i, res.getValue(scheme, 3));
         }
 
-        logManager.closePeriodicalFlush();
+        logManager.closeFlushService();
 
-//        int offset = 0, index = 0;
-//        byte[] logBytes;
-//        ByteBuffer logBuffer;
-//        i = 0;
-//        int j = 0;
-//        while ((logBytes = diskManager.readLog(Config.LOG_SIZE, offset)) != null) {
-//            logBuffer = ByteBuffer.wrap(logBytes);
-//            while (logBuffer.getInt(index) != 0) {
-////                System.out.println(logBuffer.getInt(index + 4) + ", " +
-////                        logBuffer.getInt(index + 8) + ", " +
-////                        logBuffer.get(index + 12) + ", " +
-////                        logBuffer.get(index + 16));
-//                if (logBuffer.get(index + 16) == 73) {
-////                    System.out.println(logBuffer.getInt(index + 24) + ", " +
-////                            logBuffer.getInt(index + 28));
-//                } else if (logBuffer.get(index + 16) == 85) {
-////                    System.out.println(logBuffer.getInt(index + 24) + ", " +
-////                            logBuffer.getInt(index + 28));
-//                    recordID.setRecordId(logBuffer.getInt(index + 24), logBuffer.getInt(index + 28));
-//                    int logSize = logBuffer.getInt(index);
-//                    int oldTupleSize = logBuffer.getInt(index + 32);
-//                    int newTupleSize = logBuffer.getInt(index + 36 + oldTupleSize);
-////                    System.out.println(logSize + ", " + oldTupleSize + ", " + newTupleSize);
-//                    res = new Tuple(Arrays.copyOfRange(logBytes, index + 40 + oldTupleSize, index + logSize), recordID, newTupleSize, true);
-//                    assertNotNull(res);
-//                    assertEquals(new Integer(i * 3 + 100), res.getValue(scheme, 0));
-//                    assertEquals(new Integer(i * 3 + 200), res.getValue(scheme, 1));
-//                    assertEquals( "hello " + (i + 100), res.getValue(scheme, 2));
-//                    assertEquals( "hello world " + (i + 100), res.getValue(scheme, 3));
-//                    i++;
-//                } else if (logBuffer.get(index + 17) == 76) {
-//                    recordID.setRecordId(logBuffer.getInt(index + 24), logBuffer.getInt(index + 28));
-//                    int logSize = logBuffer.getInt(index);
-//                    int oldTupleSize = logBuffer.getInt(index + 32);
-//                    int newTupleSize = logBuffer.getInt(index + 36 + oldTupleSize);
-////                    System.out.println(logSize + ", " + oldTupleSize + ", " + newTupleSize);
-//                    res = new Tuple(Arrays.copyOfRange(logBytes, index + 40 + oldTupleSize, index + logSize), recordID, newTupleSize, true);
-//                    assertNotNull(res);
-//                    assertEquals(new Integer(j * 3 + 1), res.getValue(scheme, 0));
-//                    assertEquals(new Integer(j * 3 + 2), res.getValue(scheme, 1));
-//                    assertEquals( "hello " + j, res.getValue(scheme, 2));
-//                    assertEquals( "hello world " + j, res.getValue(scheme, 3));
-//                    j++;
-//                }
-//
-//                index += logBuffer.getInt(index);
-//            }
-//            index = 0;
-//            offset += Config.LOG_SIZE;
-//        }
+        int offset = 0, index = 0, bufferStart = 0;
+        byte[] logBytes;
+        ByteBuffer logBuffer;
+        boolean whetherBeyond = false;
+        i = 0;
+        int j = 0, k = 0, q = 0;
+        while ((logBytes = diskManager.readLog(Config.LOG_SIZE, offset)) != null) {
+            logBuffer = ByteBuffer.wrap(logBytes);
+
+            while (logBuffer.getInt(index) != 0) {
+
+                if (index + logBuffer.getInt(index) >= Config.LOG_SIZE) {
+                    whetherBeyond = true;
+                    bufferStart += index;
+                    offset = bufferStart;
+                    break;
+                }
+
+//                System.out.println(index + ", " +
+//                        logBuffer.getInt(index) + ", " +
+//                        logBuffer.getInt(index + 4) + ", " +
+//                        logBuffer.getInt(index + 8) + ", " +
+//                        logBuffer.get(index + 12) + ", " +
+//                        logBuffer.get(index + 16));
+                if (logBuffer.get(index + 16) == 73) {
+//                    System.out.println(logBuffer.getInt(index + 24) + ", " +
+//                            logBuffer.getInt(index + 28));
+                } else if (logBuffer.get(index + 16) == 85) {
+//                    System.out.println(logBuffer.getInt(index + 24) + ", " +
+//                            logBuffer.getInt(index + 28));
+                    recordID.setRecordId(logBuffer.getInt(index + 24), logBuffer.getInt(index + 28));
+                    int logSize = logBuffer.getInt(index);
+                    int oldTupleSize = logBuffer.getInt(index + 32);
+                    int newTupleSize = logBuffer.getInt(index + 36 + oldTupleSize);
+//                    System.out.println(logSize + ", " + oldTupleSize + ", " + newTupleSize);
+                    res = new Tuple(Arrays.copyOfRange(logBytes, index + 40 + oldTupleSize, index + logSize), recordID, newTupleSize, true);
+                    assertNotNull(res);
+                    assertEquals(new Integer(i * 3 + 100), res.getValue(scheme, 0));
+                    assertEquals(new Integer(i * 3 + 200), res.getValue(scheme, 1));
+                    assertEquals( "hello " + (i + 100), res.getValue(scheme, 2));
+                    assertEquals( "hello world " + (i + 100), res.getValue(scheme, 3));
+
+                    // number of update
+                    i++;
+                } else if (logBuffer.get(index + 17) == 76) {
+                    recordID.setRecordId(logBuffer.getInt(index + 24), logBuffer.getInt(index + 28));
+                    int logSize = logBuffer.getInt(index);
+                    int oldTupleSize = logBuffer.getInt(index + 32);
+                    int newTupleSize = logBuffer.getInt(index + 36 + oldTupleSize);
+//                    System.out.println(logSize + ", " + oldTupleSize + ", " + newTupleSize);
+                    res = new Tuple(Arrays.copyOfRange(logBytes, index + 40 + oldTupleSize, index + logSize), recordID, newTupleSize, true);
+                    assertNotNull(res);
+                    assertEquals(new Integer(j * 3 + 1), res.getValue(scheme, 0));
+                    assertEquals(new Integer(j * 3 + 2), res.getValue(scheme, 1));
+                    assertEquals( "hello " + j, res.getValue(scheme, 2));
+                    assertEquals( "hello world " + j, res.getValue(scheme, 3));
+
+                    // number of CLR
+                    j++;
+                } else if (logBuffer.get(index + 17) == 79) {
+                    // number of commit
+                    k++;
+                } else if (logBuffer.get(index + 16) == 65) {
+                    // number of abort
+                    q++;
+                }
+
+                index += logBuffer.getInt(index);
+            }
+            index = 0;
+            if (!whetherBeyond) {
+                offset += Config.LOG_SIZE;
+            } else {
+                whetherBeyond = false;
+            }
+        }
+        assertEquals(10000, i);
+        assertEquals(10000, j);
+        assertEquals(1, k);
+        assertEquals(1, q);
 
         diskManager.close();
     }
