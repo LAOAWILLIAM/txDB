@@ -8,6 +8,7 @@ public class Config {
      */
     public static int BUFFER_SIZE = 10;
     public static boolean ENABLE_LOGGING;
+    public static boolean ENABLE_FUZZY_CHECKPOINT = true;
 
     public static final int PAGE_SIZE = 4096;       // page size in byte, 4 KB
     public static final int LOG_SIZE = (BUFFER_SIZE + 1) * PAGE_SIZE; // 209715200;   // log size in byte, 200 MB

@@ -655,7 +655,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
 //        assert parentNode != null;
         if (parentNode != null) {
 //            System.out.println(parentNode.getChildren().get(keyIndex + 1) + ", " + largeNode.getPageId());
-            bufferManager.deletePage(parentNode.getChildren().get(keyIndex + 1));
+            assert bufferManager.deletePage(parentNode.getChildren().get(keyIndex + 1));
             parentNode.remove(keyIndex);
 
             serializePageNode(page, smallNode);
@@ -693,7 +693,7 @@ public class BPlusTreeIndex<K extends Comparable<K>, V> {
             smallNode.getKeys().addAll(largeNode.getKeys());
             smallNode.getChildren().addAll(largeNode.getChildren());
 
-            bufferManager.deletePage(parentNode.getChildren().get(parentIndex + 1));
+            assert bufferManager.deletePage(parentNode.getChildren().get(parentIndex + 1));
             parentNode.remove(parentIndex);
 
             serializePageNode(page, smallNode);

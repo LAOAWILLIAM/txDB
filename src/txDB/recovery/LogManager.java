@@ -154,7 +154,21 @@ public class LogManager {
             lastLsn.set(lsn);
 
             if (flushNow) {
+                // flush commit or abort or checkpoint records to disk
                 flushLogBuffer(false);
+
+                // make sure such records are permanently stored on disk
+                while (Config.ENABLE_LOGGING && whetherFlush.get()) {
+//                    System.out.println("waiting");
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                // here we can tell the outside whether the txn is committed or aborted
+                System.out.println("commit or abort or checkpoint record has been on disk");
             }
 
             return lsn;
@@ -238,6 +252,10 @@ public class LogManager {
 
     public int getFlushedLsn() {
         return flushedLsn.get();
+    }
+
+    public int getNextLsn() {
+        return nextLsn.get();
     }
 
     private void swapLogBuffer() {

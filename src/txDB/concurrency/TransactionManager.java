@@ -15,13 +15,13 @@ public class TransactionManager {
     // TODO
     private LockManager lockManager;
     private LogManager logManager;
-    private HashMap<Integer, Transaction> txnMap;
+    private HashMap<Integer, Transaction> activeTxnMap;
     private AtomicInteger nextTxnId;
 
     public TransactionManager(LockManager lockManager, LogManager logManager) {
         this.lockManager = lockManager;
         this.logManager = logManager;
-        this.txnMap = new HashMap<>();
+        this.activeTxnMap = new HashMap<>();
         this.nextTxnId = new AtomicInteger(0);
     }
 
@@ -32,12 +32,11 @@ public class TransactionManager {
     public Transaction begin() {
         Transaction txn = new Transaction(this.nextTxnId.getAndIncrement());
         if (Config.ENABLE_LOGGING) {
-            // TODO
             LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.BEGIN);
             int lsn = logManager.appendLogRecord(logRecord, false);
             txn.setPrevLsn(lsn);
         }
-        txnMap.put(txn.getTxnId(), txn);
+        activeTxnMap.put(txn.getTxnId(), txn);
         return txn;
     }
 
@@ -50,12 +49,20 @@ public class TransactionManager {
         txn.setTransactionState(Transaction.TransactionState.COMMITTED);
 
         if (Config.ENABLE_LOGGING) {
+            // append commit record
             LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.COMMIT);
             int lsn = logManager.appendLogRecord(logRecord, true);
+            txn.setPrevLsn(lsn);
+
+            // append TXN-END record
+            logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.END);
+            lsn = logManager.appendLogRecord(logRecord, false);
             txn.setPrevLsn(lsn);
         }
 
         releaseAllLocks(txn);
+
+        activeTxnMap.remove(txn.getTxnId());
     }
 
     /**
@@ -84,21 +91,32 @@ public class TransactionManager {
         }
 
         if (Config.ENABLE_LOGGING) {
-            // TODO
+            // append abort record
             LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.ABORT);
             int lsn = logManager.appendLogRecord(logRecord, true);
+            txn.setPrevLsn(lsn);
+
+            // append TXN-END record
+            logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.END);
+            lsn = logManager.appendLogRecord(logRecord, false);
             txn.setPrevLsn(lsn);
         }
 
         releaseAllLocks(txn);
+
+        activeTxnMap.remove(txn.getTxnId());
     }
 
     public Transaction getTransaction(int txnId) {
-        if (txnMap.containsKey(txnId)) {
-            return txnMap.get(txnId);
+        if (activeTxnMap.containsKey(txnId)) {
+            return activeTxnMap.get(txnId);
         }
 
         return null;
+    }
+
+    public HashMap<Integer, Transaction> getActiveTxnMap() {
+        return activeTxnMap;
     }
 
     private void releaseAllLocks(Transaction txn) {

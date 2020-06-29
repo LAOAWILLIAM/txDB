@@ -4,8 +4,8 @@ import txDB.buffer.BufferManager;
 import txDB.storage.disk.DiskManager;
 
 /**
- * This is a recovery manager after system crash
- * One of the hardest parts in this project !!!
+ * This is a recovery manager after system crash,
+ * I use ARIES here.
  */
 public class LogRecovery {
     // TODO

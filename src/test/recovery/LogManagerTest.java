@@ -81,9 +81,9 @@ public class LogManagerTest {
 
         ArrayList<Object> values = new ArrayList<>();
         Tuple tuple;
-        int i;
+        int i, num = 100000;
         Instant start = Instant.now();
-        for (i = 0; i < 10000; i++) {
+        for (i = 0; i < num; i++) {
             values.clear();
             values.add(i * 3 + 1);
             values.add(i * 3 + 2);
@@ -108,6 +108,7 @@ public class LogManagerTest {
         ByteBuffer logBuffer;
         boolean whetherBeyond = false;
         i = 0;
+        int j = 0;
         while ((logBytes = diskManager.readLog(Config.LOG_SIZE, offset)) != null) {
             logBuffer = ByteBuffer.wrap(logBytes);
             while (logBuffer.getInt(index) != 0) {
@@ -131,6 +132,9 @@ public class LogManagerTest {
 
                     // number of commit
                     i++;
+                } else if (logBuffer.get(index + 16) == 69) {
+                    // number of end
+                    j++;
                 }
 
                 index += logBuffer.getInt(index);
@@ -142,7 +146,8 @@ public class LogManagerTest {
                 whetherBeyond = false;
             }
         }
-        assertEquals(10000, i);
+        assertEquals(num, i);
+        assertEquals(1, j);
 
         diskManager.close();
     }
@@ -197,9 +202,9 @@ public class LogManagerTest {
         ArrayList<Integer> unLinedValueLens = new ArrayList<>();
         Tuple tuple;
         String val2, val3;
-        int i;
+        int i, num = 100000;
         Instant start = Instant.now();
-        for (i = 0; i < 10000; i++) {
+        for (i = 0; i < num; i++) {
             values.clear();
             values.add(i * 3 + 1);
             values.add(i * 3 + 2);
@@ -247,7 +252,7 @@ public class LogManagerTest {
         boolean whetherBeyond = false;
         Tuple res;
         i = 0;
-        int j = 0;
+        int j = 0, k = 0;
         while ((logBytes = diskManager.readLog(Config.LOG_SIZE, offset)) != null) {
             logBuffer = ByteBuffer.wrap(logBytes);
             while (logBuffer.getInt(index) != 0) {
@@ -288,6 +293,9 @@ public class LogManagerTest {
                 } else if (logBuffer.get(index + 16) == 67) {
                     // number of commit
                     j++;
+                } else if (logBuffer.get(index + 16) == 69) {
+                    // number of end
+                    k++;
                 }
 
                 index += logBuffer.getInt(index);
@@ -299,8 +307,9 @@ public class LogManagerTest {
                 whetherBeyond = false;
             }
         }
-        assertEquals(10000, i);
+        assertEquals(num, i);
         assertEquals(2, j);
+        assertEquals(2, k);
 
         diskManager.close();
     }
@@ -356,9 +365,9 @@ public class LogManagerTest {
         ArrayList<RecordID> recordIDS = new ArrayList<>();
         Tuple tuple;
         String val2, val3;
-        int i;
+        int i, num = 100000;
         Instant start = Instant.now();
-        for (i = 0; i < 10000; i++) {
+        for (i = 0; i < num; i++) {
             values.clear();
             values.add(i * 3 + 1);
             values.add(i * 3 + 2);
@@ -417,7 +426,7 @@ public class LogManagerTest {
         ByteBuffer logBuffer;
         boolean whetherBeyond = false;
         i = 0;
-        int j = 0, k = 0, q = 0;
+        int j = 0, k = 0, q = 0, p = 0;
         while ((logBytes = diskManager.readLog(Config.LOG_SIZE, offset)) != null) {
             logBuffer = ByteBuffer.wrap(logBytes);
 
@@ -477,6 +486,9 @@ public class LogManagerTest {
                 } else if (logBuffer.get(index + 16) == 65) {
                     // number of abort
                     q++;
+                } else if (logBuffer.get(index + 16) == 69) {
+                    // number of end
+                    p++;
                 }
 
                 index += logBuffer.getInt(index);
@@ -488,10 +500,11 @@ public class LogManagerTest {
                 whetherBeyond = false;
             }
         }
-        assertEquals(10000, i);
-        assertEquals(10000, j);
+        assertEquals(num, i);
+        assertEquals(num, j);
         assertEquals(1, k);
         assertEquals(1, q);
+        assertEquals(2, p);
 
         diskManager.close();
     }

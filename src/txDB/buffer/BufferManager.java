@@ -6,6 +6,7 @@ import txDB.storage.disk.DiskManager;
 import txDB.storage.page.Page;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 
 public class BufferManager {
@@ -172,26 +173,30 @@ public class BufferManager {
     }
 
     /**
-     * Flush all existing pages to disk
+     * Flush all existing dirty pages to disk if full checkpoint scheme is enabled
      */
-    public void flushAllPages() {
+    public HashMap<Integer, Page> flushAllDirtyPages(boolean whetherFuzzy) {
         synchronized (this) {
-            ArrayList<Integer> flushList = new ArrayList<>();
+            HashMap<Integer, Page> dirtyPageMap = new HashMap<>();
             for (int pageId: this.lruBufferPool.getAll()) {
 //                System.out.println(pageId+ ": " + this.lruBufferPool.get(pageId, false).getPinCount());
                 Page page = this.lruBufferPool.get(pageId, false);
-                flushList.add(pageId);
                 if (page.getIsDirty()) {
-                    this.diskManager.writePage(pageId, page.getPageData());
+                    if (!whetherFuzzy) {
+                        // WAL must still be followed here
+                        if (Config.ENABLE_LOGGING && logManager.getFlushedLsn() < page.getLsn()) {
+//                        System.out.println("buffer manager wait for log flush");
+                            logManager.flushLogBuffer(true);
+                        }
+                        assert logManager.getFlushedLsn() >= page.getLsn();
+                        this.diskManager.writePage(pageId, page.getPageData());
+                    }
 //                    System.out.println("page " + pageId + " is flushed");
+                    dirtyPageMap.put(pageId, page);
                 }
             }
 
-            int i;
-            for (i = 0; i < flushList.size(); i++) {
-//                System.out.println("page " + flushList.get(i) + " is deleted");
-                this.lruBufferPool.delete(flushList.get(i));
-            }
+            return dirtyPageMap;
         }
     }
 
@@ -233,8 +238,52 @@ public class BufferManager {
         }
     }
 
-    // test helper function
+    // belows are test helper functions
+
     public int getSize() {
         return this.lruBufferPool.getAll().size();
+    }
+
+    /**
+     * Simulate a system crash that the buffer pool is cleaned
+     */
+    public void bufferCrash() {
+        synchronized (this) {
+            ArrayList<Integer> flushList = new ArrayList<>(this.lruBufferPool.getAll());
+
+            int i;
+            for (i = 0; i < flushList.size(); i++) {
+                this.lruBufferPool.delete(flushList.get(i));
+            }
+        }
+    }
+
+    /**
+     * Flush all existing dirty pages to disk, and clean the buffer pool
+     */
+    public void flushAllPages() {
+        synchronized (this) {
+            ArrayList<Integer> flushList = new ArrayList<>();
+            for (int pageId: this.lruBufferPool.getAll()) {
+//                System.out.println(pageId+ ": " + this.lruBufferPool.get(pageId, false).getPinCount());
+                Page page = this.lruBufferPool.get(pageId, false);
+                flushList.add(pageId);
+                if (page.getIsDirty()) {
+                    if (Config.ENABLE_LOGGING && logManager.getFlushedLsn() < page.getLsn()) {
+//                        System.out.println("buffer manager wait for log flush");
+                        logManager.flushLogBuffer(true);
+                    }
+                    assert logManager.getFlushedLsn() >= page.getLsn();
+                    this.diskManager.writePage(pageId, page.getPageData());
+//                    System.out.println("page " + pageId + " is flushed");
+                }
+            }
+
+            int i;
+            for (i = 0; i < flushList.size(); i++) {
+//                System.out.println("page " + flushList.get(i) + " is deleted");
+                this.lruBufferPool.delete(flushList.get(i));
+            }
+        }
     }
 }

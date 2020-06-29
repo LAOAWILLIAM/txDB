@@ -1,19 +1,21 @@
 package txDB.recovery;
 
 import txDB.Config;
+import txDB.concurrency.Transaction;
+import txDB.storage.page.Page;
 import txDB.storage.table.RecordID;
 import txDB.storage.table.Tuple;
 
-import java.io.Serializable;
+import java.io.*;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.HashMap;
 
 public class LogRecord implements Serializable {
     /**
      * TODO: should consider if logRecordBuffer does not have enough space
-     * one solution is to allocate enough space at the first
+     *  one solution is to allocate enough space at the first
      */
-    public enum LogRecordType {INVALID, INSERT, UPDATE, BEGIN, COMMIT, ABORT, CLR}
+    public enum LogRecordType {INVALID, INSERT, UPDATE, BEGIN, COMMIT, ABORT, CLR, END, CBEGIN, CEND}
     private int logSize = 0;
     private LogRecordType logRecordType = LogRecordType.INVALID;
     private int txnId = Config.INVALID_TXN_ID;
@@ -164,6 +166,72 @@ public class LogRecord implements Serializable {
         logSize = 44 + oldTuple.getTupleSize() + i;
 //        System.out.println(recordID.getPageId() + ", " + recordID.getTupleIndex() + ": " + logSize);
         logRecordBuffer.putInt(0, logSize);
+    }
+
+    /**
+     * For checkpoint begin
+     * @param prevLsn
+     * @param logRecordType
+     */
+    public LogRecord(int prevLsn, LogRecordType logRecordType) {
+        this.prevLsn = prevLsn;
+        this.logRecordType = logRecordType;
+        logSize = 20;
+
+        logRecordBuffer.putInt(0, logSize);
+        logRecordBuffer.putInt(8, prevLsn);
+        int i = 0;
+        for (byte v: logRecordType.name().getBytes()) {
+            logRecordBuffer.put(12 + i, v);
+            i++;
+        }
+    }
+
+    /**
+     * For checkpoint end
+     * @param prevLsn
+     * @param logRecordType
+     * @param activeTxnMap
+     */
+    public LogRecord(int prevLsn, LogRecordType logRecordType, HashMap<Integer, Transaction> activeTxnMap, HashMap<Integer, Page> dirtyPageMap) {
+        this.prevLsn = prevLsn;
+        this.logRecordType = logRecordType;
+
+        logRecordBuffer.putInt(8, prevLsn);
+        int i = 0;
+        for (byte v: logRecordType.name().getBytes()) {
+            logRecordBuffer.put(12 + i, v);
+            i++;
+        }
+
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutput out = new ObjectOutputStream(bos);
+            out.writeObject(activeTxnMap);
+            byte[] activeTxnMapBytes = bos.toByteArray();
+
+            logRecordBuffer.putInt(20, activeTxnMapBytes.length);
+            for (i = 0; i < activeTxnMapBytes.length; i++) {
+                logRecordBuffer.put(24 + i, activeTxnMapBytes[i]);
+            }
+
+            bos.reset();
+            out = new ObjectOutputStream(bos);
+            out.writeObject(dirtyPageMap);
+            byte[] dirtyPageMapBytes = bos.toByteArray();
+
+            logRecordBuffer.putInt(24 + i, dirtyPageMapBytes.length);
+            int j;
+            for (j = 0; j < dirtyPageMapBytes.length; j++) {
+                logRecordBuffer.put(28 + i + j, dirtyPageMapBytes[j]);
+            }
+
+            logSize = 28 + i + j;
+            logRecordBuffer.putInt(0, logSize);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public LogRecord() {}
