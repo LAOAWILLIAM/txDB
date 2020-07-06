@@ -13,6 +13,7 @@ public class DiskManager {
     private FileOutputStream dbFileWrite;
     private FileInputStream logFileRead;
     private FileOutputStream logFileWrite;
+    private File logFile;
     private AtomicInteger nextPageId;
 
     public DiskManager() {
@@ -72,7 +73,7 @@ public class DiskManager {
         String dbFilePath = this.dbRootPath + dbName + ".db";
         String logFilePath = dbFilePath.split("\\\\.")[0] + ".log";
         File dbFile = new File(dbFilePath);
-        File logFile = new File(logFilePath);
+        logFile = new File(logFilePath);
 
         if (!dbFile.exists() || !dbFile.isFile()) {
             throw new FileNotFoundException();
@@ -149,12 +150,18 @@ public class DiskManager {
      * append to the end of the log file
      * @param logData
      */
-    public void writeLog(byte[] logData) {
+    public int writeLog(byte[] logData, boolean whetherCheckpoint) {
+        int logFileLength = -1;
         try {
+            if (whetherCheckpoint) {
+                logFileLength = (int) logFile.length();
+            }
             this.logFileWrite.write(logData);
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        return logFileLength;
     }
 
     /**

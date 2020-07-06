@@ -1,8 +1,12 @@
 package txDB.recovery;
 
 import txDB.Config;
+import txDB.buffer.BufferManager;
 import txDB.storage.disk.DiskManager;
+import txDB.storage.page.MetaDataPage;
+import txDB.storage.page.Page;
 
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
@@ -16,20 +20,22 @@ import java.util.concurrent.atomic.AtomicInteger;
  * For thread coordination, please refer to relative knowledge accordingly,
  * which is very hard and meanwhile important.
  */
-public class LogManager {
+public class LogManager implements Serializable {
     // TODO
 //    private ByteBuffer testFlushLogBuffer;
 //    private ByteBuffer testAppendLogBuffer;
-    private ByteBuffer flushLogBuffer;
-    private ByteBuffer appendLogBuffer;
-    private ByteBuffer tmpLogBuffer;
-    private ByteBuffer curFlushLogBuffer;
-    private DiskManager diskManager;
-    private ExecutorService flushService;
+    private transient ByteBuffer flushLogBuffer;
+    private transient ByteBuffer appendLogBuffer;
+    private transient ByteBuffer tmpLogBuffer;
+    private transient ByteBuffer curFlushLogBuffer;
+    private transient DiskManager diskManager;
+    private transient ExecutorService flushService;
     private AtomicInteger nextLsn;
     private AtomicBoolean whetherFlush;
     private AtomicInteger lastLsn;
     private AtomicInteger flushedLsn;
+    private AtomicBoolean whetherCheckpoint;
+    private AtomicInteger logFileLength;
 
     /**
      *
@@ -49,6 +55,8 @@ public class LogManager {
 
         whetherFlush = new AtomicBoolean(false);
         flushService = Executors.newSingleThreadExecutor();
+        whetherCheckpoint = new AtomicBoolean(false);
+        logFileLength = new AtomicInteger(0);
 //        this.periodicalFlushService.execute(new periodicalFlush());
     }
 
@@ -109,7 +117,7 @@ public class LogManager {
      * @param flushNow
      * @return
      */
-    public int appendLogRecord(LogRecord logRecord, boolean flushNow) {
+    public int appendLogRecord(LogRecord logRecord, boolean flushNow, boolean whetherCheckpoint) {
         // TODO
         synchronized (this) {
             if (logRecord.getLogSize() <= 0) return -1;
@@ -155,20 +163,27 @@ public class LogManager {
 
             if (flushNow) {
                 // flush commit or abort or checkpoint records to disk
-                flushLogBuffer(false);
+                if (whetherCheckpoint) {
+                    System.out.println("appending checkpoint record");
+                    flushLogBuffer(true, true);
+                    this.whetherCheckpoint.set(false);
+                    return logFileLength.get();
+                } else {
+                    flushLogBuffer(false, false);
 
-                // make sure such records are permanently stored on disk
-                while (Config.ENABLE_LOGGING && whetherFlush.get()) {
+                    // make sure such records are permanently stored on disk
+                    while (Config.ENABLE_LOGGING && whetherFlush.get()) {
 //                    System.out.println("waiting");
-                    try {
-                        wait();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        try {
+                            wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }
 
-                // here we can tell the outside whether the txn is committed or aborted
-                System.out.println("commit or abort or checkpoint record has been on disk");
+                    // here we can tell the outside whether the txn is committed or aborted
+                    System.out.println("commit or abort record has been on disk");
+                }
             }
 
             return lsn;
@@ -178,7 +193,7 @@ public class LogManager {
     /**
      *
      */
-    public void flushLogBuffer(boolean whetherForce) {
+    public void flushLogBuffer(boolean whetherForce, boolean whetherCheckpoint) {
         synchronized (this) {
             while (Config.ENABLE_LOGGING && whetherFlush.get()) {
 //                System.out.println("waiting");
@@ -192,9 +207,11 @@ public class LogManager {
             if (!whetherForce) {
                 // not force, instead of using flush thread
                 whetherFlush.set(true);
+//                this.whetherCheckpoint.set(whetherCheckpoint);
                 notify();
             } else {
                 // force to flush when writing dirty pages to disk
+                this.whetherCheckpoint.set(whetherCheckpoint);
                 _flushLogBuffer();
             }
         }
@@ -214,8 +231,12 @@ public class LogManager {
 //                    System.out.println("use append");
 //                }
 //                diskManager.writeLog(curFlushLogBuffer.array());
-                diskManager.writeLog(
-                        Arrays.copyOfRange(curFlushLogBuffer.array(), 0, curFlushLogBuffer.position()));
+                int logFileLength = diskManager.writeLog(
+                        Arrays.copyOfRange(curFlushLogBuffer.array(), 0, curFlushLogBuffer.position()), whetherCheckpoint.get());
+                if (whetherCheckpoint.get() && logFileLength != -1) {
+//                    System.out.println("record checkpoint");
+                    this.logFileLength.set(logFileLength);
+                }
 //                System.out.println("flush to disk");
                 flushedLsn.set(lastLsn.get());
                 // TODO: optimization needed
@@ -237,7 +258,7 @@ public class LogManager {
      */
     public void closeFlushService() {
         if (!Config.ENABLE_LOGGING) return;
-        flushLogBuffer(false);
+        flushLogBuffer(false, false);
         Config.ENABLE_LOGGING = false;
         this.flushService.shutdown();
         try {
@@ -262,5 +283,22 @@ public class LogManager {
         tmpLogBuffer = appendLogBuffer;
         appendLogBuffer = flushLogBuffer;
         flushLogBuffer = tmpLogBuffer;
+    }
+
+    // belows are test helper functions
+
+    /**
+     * Simulate a system crash that log buffers are cleaned
+     */
+    public void logCrash() {
+        flushService.shutdown();
+        for (int i = 0; i < appendLogBuffer.limit(); i++) {
+            appendLogBuffer.put(i, (byte) 0);
+        }
+        appendLogBuffer.clear();
+        for (int i = 0; i < flushLogBuffer.limit(); i++) {
+            flushLogBuffer.put(i, (byte) 0);
+        }
+        flushLogBuffer.clear();
     }
 }

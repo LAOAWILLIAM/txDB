@@ -2,6 +2,7 @@ package txDB.storage.table;
 
 import txDB.type.Type;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,7 +13,7 @@ import java.util.Arrays;
  * | FIXED-SIZE or VARIED-SIZED OFFSET | PAYLOAD OF VARIED-SIZED FIELD |
  * ---------------------------------------------------------------------
  */
-public class Tuple {
+public class Tuple implements Serializable {
     private byte[] tupleData;
     private RecordID recordID;
     private int tupleSize;

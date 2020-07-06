@@ -689,9 +689,10 @@ public class TableTest {
 
         ArrayList<Object> values = new ArrayList<>();
         ArrayList<Integer> unLinedValueLens = new ArrayList<>();
+        ArrayList<RecordID> recordIDS = new ArrayList<>();
         Tuple tuple, res;
         String val2, val3;
-        int i;
+        int i, num = 10000;
         for (i = 0; i < 10000; i++) {
             values.clear();
             values.add(i * 3 + 1);
@@ -727,6 +728,7 @@ public class TableTest {
             unLinedValueLens.add(val3.length());
             tuple = new Tuple(values, scheme, unLinedValueLens);
             assertTrue(table.updateTuple(tuple, recordID, txn0));
+            recordIDS.add(recordID);
             res = table.getTuple(recordID, txn0);
             assertNotNull(res);
             assertEquals(new Integer(i * 3 + 100), res.getValue(scheme, 0));
@@ -740,6 +742,16 @@ public class TableTest {
 
         page0 = bufferManager.fetchPage(0);
         assertNotNull(page0);
+
+        Transaction txn1 = transactionManager.begin();
+        for (i = 0; i < num; i++) {
+            res = table.getTuple(recordIDS.get(i), txn1);
+            assertNotNull(res);
+            assertEquals(new Integer(i * 3 + 100), res.getValue(scheme, 0));
+            assertEquals(new Integer(i * 3 + 200), res.getValue(scheme, 1));
+            assertEquals( "hello " + (i + 100), res.getValue(scheme, 2));
+            assertEquals( "hello world " + (i + 100), res.getValue(scheme, 3));
+        }
 
         lockManager.closeDetection();
         diskManager.close();

@@ -9,11 +9,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MetaDataPage implements Serializable {
-    // TODO
+    // TODO: should consider if page is full
     private int nextPageId;
     private int prevPageId;
     private HashMap<String, RelationMetaData> relationMetaDataMap;
     private HashMap<String, IndexMetaData> indexMetaDataMap;
+    private int lastCheckpointOffset;
     // maybe useful in future
     private List<Integer> freeList;
 
@@ -21,12 +22,21 @@ public class MetaDataPage implements Serializable {
         this.relationMetaDataMap = new HashMap<>();
         this.indexMetaDataMap = new HashMap<>();
         this.freeList = new ArrayList<>();
+        this.lastCheckpointOffset = 0;
     }
 
     public MetaDataPage(ArrayList<Integer> freeList) {
         this.relationMetaDataMap = new HashMap<>();
         this.indexMetaDataMap = new HashMap<>();
         this.freeList = freeList;
+    }
+
+    public int getLastCheckpointOffset() {
+        return lastCheckpointOffset;
+    }
+
+    public void setLastCheckpointOffset(int lastCheckpointOffset) {
+        this.lastCheckpointOffset = lastCheckpointOffset;
     }
 
     public void addRelationMetaData(String relationName, RelationMetaData relationMetaData) {

@@ -1,16 +1,21 @@
 package txDB.storage.page;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import txDB.Config;
 import txDB.concurrency.LockManager;
 import txDB.concurrency.Transaction;
 import txDB.recovery.LogManager;
 import txDB.recovery.LogRecord;
+import txDB.storage.table.Column;
 import txDB.storage.table.RecordID;
+import txDB.storage.table.Scheme;
 import txDB.storage.table.Tuple;
 import txDB.concurrency.Transaction.TransactionState;
+import txDB.type.Type;
 
 /**
  * Reference: This page format is designed by BusTub team, Carnegie Mellon University Database Group
@@ -204,7 +209,7 @@ public class TablePage extends Page {
             // TODO
             assert lockManager.acquireExclusiveLock(txn, recordID);
             LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.INSERT, recordID, tuple);
-            int lsn = logManager.appendLogRecord(logRecord, false);
+            int lsn = logManager.appendLogRecord(logRecord, false, false);
             txn.setPrevLsn(lsn);
             setLsn(lsn);
         }
@@ -245,7 +250,7 @@ public class TablePage extends Page {
             // TODO
             assert lockManager.acquireExclusiveLock(txn, recordID);
             LogRecord logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.INSERT, recordID, tuple);
-            int lsn = logManager.appendLogRecord(logRecord, false);
+            int lsn = logManager.appendLogRecord(logRecord, false, false);
             txn.setPrevLsn(lsn);
             setLsn(lsn);
 //            lockManager.unlock(txn, recordID);
@@ -297,12 +302,13 @@ public class TablePage extends Page {
 
             LogRecord logRecord;
             if (txn.getTransactionState() == TransactionState.ABORTED) {
-                logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.CLR, recordID, oldTuple, newTuple);
+                List<Transaction.WriteRecord> writeRecords = txn.getWriteRecordList();
+                logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.CLR, recordID, oldTuple, newTuple, writeRecords.get(writeRecords.size() - 1).getLsn());
             } else {
                 logRecord = new LogRecord(txn.getPrevLsn(), txn.getTxnId(), LogRecord.LogRecordType.UPDATE, recordID, oldTuple, newTuple);
             }
 
-            int lsn = logManager.appendLogRecord(logRecord, false);
+            int lsn = logManager.appendLogRecord(logRecord, false, false);
             txn.setPrevLsn(lsn);
             setLsn(lsn);
         }
@@ -335,9 +341,10 @@ public class TablePage extends Page {
 
     private void spaceMove(int dest, int src, int length) {
         ByteBuffer pageBuffer = ByteBuffer.wrap(this.getPageData());
+        byte[] moveBytes = Arrays.copyOfRange(this.getPageData(), src, src + length);
         int i;
         for (i = 0; i < length; i++) {
-            pageBuffer.put(dest + i, pageBuffer.get(src + i));
+            pageBuffer.put(dest + i, moveBytes[i]);
         }
     }
 

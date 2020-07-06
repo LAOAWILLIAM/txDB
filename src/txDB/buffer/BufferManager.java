@@ -5,15 +5,16 @@ import txDB.recovery.LogManager;
 import txDB.storage.disk.DiskManager;
 import txDB.storage.page.Page;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 
-public class BufferManager {
-    private LRUBufferPool lruBufferPool;
-    private DiskManager diskManager;
+public class BufferManager implements Serializable {
+    private transient LRUBufferPool lruBufferPool;
+    private transient DiskManager diskManager;
     private LinkedList<Page> freeList;
-    private LogManager logManager;
+    private transient LogManager logManager;
 
     /**
      *
@@ -52,7 +53,7 @@ public class BufferManager {
                 if (requestPage.getIsDirty()) {
                     if (Config.ENABLE_LOGGING && logManager.getFlushedLsn() < requestPage.getLsn()) {
 //                        System.out.println("buffer manager wait for log flush");
-                        logManager.flushLogBuffer(true);
+                        logManager.flushLogBuffer(true, false);
                     }
                     assert logManager.getFlushedLsn() >= requestPage.getLsn();
                     this.diskManager.writePage(pageId, requestPage.getPageData());
@@ -175,9 +176,9 @@ public class BufferManager {
     /**
      * Flush all existing dirty pages to disk if full checkpoint scheme is enabled
      */
-    public HashMap<Integer, Page> flushAllDirtyPages(boolean whetherFuzzy) {
+    public HashMap<Integer, Integer> flushAllDirtyPages(boolean whetherFuzzy) {
         synchronized (this) {
-            HashMap<Integer, Page> dirtyPageMap = new HashMap<>();
+            HashMap<Integer, Integer> dirtyPageMap = new HashMap<>();
             for (int pageId: this.lruBufferPool.getAll()) {
 //                System.out.println(pageId+ ": " + this.lruBufferPool.get(pageId, false).getPinCount());
                 Page page = this.lruBufferPool.get(pageId, false);
@@ -186,13 +187,13 @@ public class BufferManager {
                         // WAL must still be followed here
                         if (Config.ENABLE_LOGGING && logManager.getFlushedLsn() < page.getLsn()) {
 //                        System.out.println("buffer manager wait for log flush");
-                            logManager.flushLogBuffer(true);
+                            logManager.flushLogBuffer(true, false);
                         }
                         assert logManager.getFlushedLsn() >= page.getLsn();
                         this.diskManager.writePage(pageId, page.getPageData());
                     }
 //                    System.out.println("page " + pageId + " is flushed");
-                    dirtyPageMap.put(pageId, page);
+                    dirtyPageMap.put(pageId, page.getLsn());
                 }
             }
 
@@ -271,7 +272,7 @@ public class BufferManager {
                 if (page.getIsDirty()) {
                     if (Config.ENABLE_LOGGING && logManager.getFlushedLsn() < page.getLsn()) {
 //                        System.out.println("buffer manager wait for log flush");
-                        logManager.flushLogBuffer(true);
+                        logManager.flushLogBuffer(true, false);
                     }
                     assert logManager.getFlushedLsn() >= page.getLsn();
                     this.diskManager.writePage(pageId, page.getPageData());

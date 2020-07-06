@@ -9,7 +9,9 @@ import txDB.storage.page.TablePage;
 import txDB.storage.page.Page;
 import txDB.concurrency.Transaction.TransactionState;
 
-public class Table {
+import java.io.Serializable;
+
+public class Table implements Serializable {
     // TODO
     private BufferManager bufferManager;
     private LockManager lockManager;
@@ -117,7 +119,7 @@ public class Table {
 //        System.out.println("curTablePage: " + curTablePage.getTablePageId());
         bufferManager.unpinPage(curTablePage.getPageId(), true);
         // transaction operation here
-        txn.pushWriteRecordQueue(txn.new WriteRecord(recordID, Transaction.WriteType.INSERT, this, null, null));
+        txn.addWriteRecordList(txn.new WriteRecord(recordID, txn.getPrevLsn(), Transaction.WriteType.INSERT, this, null, null));
         return true;
     }
 
@@ -180,7 +182,7 @@ public class Table {
 //        System.out.println("curTablePage: " + curTablePage.getTablePageId());
         bufferManager.unpinPage(curTablePage.getPageId(), true);
         // transaction operation here
-        txn.pushWriteRecordQueue(txn.new WriteRecord(recordID, Transaction.WriteType.INSERT, this, null, null));
+        txn.addWriteRecordList(txn.new WriteRecord(recordID, txn.getPrevLsn(), Transaction.WriteType.INSERT, this, null, null));
         return recordID;
     }
 
@@ -201,8 +203,10 @@ public class Table {
         tablePage.writeUnlatch();
         bufferManager.unpinPage(recordID.getPageId(), res);
 
+        // judge whether transaction state is aborted or not is necessary,
+        // otherwise it will be a infinite loop when scanning log
         if (res && txn.getTransactionState() != TransactionState.ABORTED) {
-            txn.pushWriteRecordQueue(txn.new WriteRecord(recordID, Transaction.WriteType.UPDATE, this, oldTuple, newTuple));
+            txn.addWriteRecordList(txn.new WriteRecord(recordID, txn.getPrevLsn(), Transaction.WriteType.UPDATE, this, oldTuple, newTuple));
         }
 
         return res;

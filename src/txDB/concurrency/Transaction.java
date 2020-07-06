@@ -6,9 +6,10 @@ import txDB.storage.table.RecordID;
 import txDB.storage.table.Table;
 import txDB.storage.table.Tuple;
 
+import java.io.Serializable;
 import java.util.*;
 
-public class Transaction {
+public class Transaction implements Serializable {
     // TODO
     public enum TransactionState {GROWING, SHRINKING, COMMITTED, ABORTED, RESTARTED}
     public enum WriteType {INSERT, UPDATE, DELETE}
@@ -18,7 +19,7 @@ public class Transaction {
     private Queue<Page> indexPageQueue;         // index page latched
     private HashSet<RecordID> sharedLockSet;    // tuple shared locked
     private HashSet<RecordID> exclusiveLockSet; // tuple exclusive locked
-    private Queue<WriteRecord> writeRecordQueue;
+    private List<WriteRecord> writeRecordList;
 
     public Transaction(int txnId) {
         this.txnId = txnId;
@@ -27,18 +28,20 @@ public class Transaction {
         this.indexPageQueue = new LinkedList<>();
         this.sharedLockSet = new HashSet<>();
         this.exclusiveLockSet = new HashSet<>();
-        this.writeRecordQueue = new LinkedList<>();
+        this.writeRecordList = new LinkedList<>();
     }
 
-    public class WriteRecord {
+    public class WriteRecord implements Serializable {
         private RecordID recordID;
+        private int lsn;
         private WriteType writeType;
         private Table table;
         private Tuple oldTuple;
         private Tuple newTuple;
 
-        public WriteRecord(RecordID recordID, WriteType writeType, Table table, Tuple oldTuple, Tuple newTuple) {
+        public WriteRecord(RecordID recordID, int lsn, WriteType writeType, Table table, Tuple oldTuple, Tuple newTuple) {
             this.recordID = recordID;
+            this.lsn = lsn;
             this.writeType = writeType;
             this.table = table;
             this.oldTuple = oldTuple;
@@ -63,6 +66,10 @@ public class Transaction {
 
         public WriteType getWriteType() {
             return writeType;
+        }
+
+        public int getLsn() {
+            return lsn;
         }
     }
 
@@ -114,15 +121,11 @@ public class Transaction {
         this.prevLsn = prevLsn;
     }
 
-    public Queue<WriteRecord> getWriteRecordQueue() {
-        return writeRecordQueue;
+    public List<WriteRecord> getWriteRecordList() {
+        return writeRecordList;
     }
 
-    public void pushWriteRecordQueue(WriteRecord writeRecord) {
-        writeRecordQueue.add(writeRecord);
-    }
-
-    public WriteRecord popWriteRecordQueue() {
-        return writeRecordQueue.poll();
+    public void addWriteRecordList(WriteRecord writeRecord) {
+        writeRecordList.add(writeRecord);
     }
 }

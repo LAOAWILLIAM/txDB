@@ -170,7 +170,7 @@ public class LRUBufferPool {
 //                    System.out.println("page " + evictNode.key + " is flushed");
                     if (Config.ENABLE_LOGGING && logManager.getFlushedLsn() < evictNode.value.getLsn()) {
                         System.out.println("buffer manager wait for log flush when evicting pages");
-                        logManager.flushLogBuffer(true);
+                        logManager.flushLogBuffer(true, false);
                     }
                     assert logManager.getFlushedLsn() >= evictNode.value.getLsn();
                     this.diskManager.writePage(evictNode.key, evictNode.value.getPageData());

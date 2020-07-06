@@ -2,13 +2,14 @@ package txDB.concurrency;
 
 import txDB.storage.table.RecordID;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class LockManager {
+public class LockManager implements Serializable {
     // TODO: deadlock discovery with deadlock detection, and lock granularity support (now only tuple supported, overhead is high !!!)
     public enum TwoPhaseLockType {REGULAR, STRICT}
     public enum DeadlockType {PREVENTION, DETECTION}
@@ -59,7 +60,7 @@ public class LockManager {
         return cycles;
     }
 
-    private class LockRequestQueue {
+    private class LockRequestQueue implements Serializable {
         private Queue<LockRequest> requestQueue;
         private boolean isShared = true;
 //        private Lock lock;
@@ -142,7 +143,7 @@ public class LockManager {
         }
     }
 
-    private class LockRequest {
+    private class LockRequest implements Serializable {
         private int txnId;
         private LockType lockType;
         private boolean granted;

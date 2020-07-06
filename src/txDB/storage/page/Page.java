@@ -2,13 +2,14 @@ package txDB.storage.page;
 
 import txDB.Config;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class Page {
+public class Page implements Serializable {
     private int pageId;
     private boolean isDirty;
     private int pinCount;

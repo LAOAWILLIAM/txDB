@@ -1,14 +1,11 @@
 package txDB.recovery;
 
 import txDB.Config;
-import txDB.concurrency.Transaction;
-import txDB.storage.page.Page;
 import txDB.storage.table.RecordID;
 import txDB.storage.table.Tuple;
 
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 
 public class LogRecord implements Serializable {
     /**
@@ -21,7 +18,7 @@ public class LogRecord implements Serializable {
     private int txnId = Config.INVALID_TXN_ID;
     private int lsn = Config.INVALID_LSN;
     private int prevLsn = Config.INVALID_LSN;
-    private ByteBuffer logRecordBuffer = ByteBuffer.allocate(256);
+    private ByteBuffer logRecordBuffer = ByteBuffer.allocate(1024);
 
     private RecordID recordID;
 
@@ -191,9 +188,9 @@ public class LogRecord implements Serializable {
      * For checkpoint end
      * @param prevLsn
      * @param logRecordType
-     * @param activeTxnMap
+     * @param activeTxnsAndDirtyPages
      */
-    public LogRecord(int prevLsn, LogRecordType logRecordType, HashMap<Integer, Transaction> activeTxnMap, HashMap<Integer, Page> dirtyPageMap) {
+    public LogRecord(int prevLsn, LogRecordType logRecordType, ActiveTxnsAndDirtyPages activeTxnsAndDirtyPages) {
         this.prevLsn = prevLsn;
         this.logRecordType = logRecordType;
 
@@ -204,29 +201,21 @@ public class LogRecord implements Serializable {
             i++;
         }
 
+//        System.out.println("start serialize object");
+
         try {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             ObjectOutput out = new ObjectOutputStream(bos);
-            out.writeObject(activeTxnMap);
+            out.writeObject(activeTxnsAndDirtyPages);
             byte[] activeTxnMapBytes = bos.toByteArray();
+//            System.out.println("serialized object: " + activeTxnMapBytes.length);
 
             logRecordBuffer.putInt(20, activeTxnMapBytes.length);
             for (i = 0; i < activeTxnMapBytes.length; i++) {
                 logRecordBuffer.put(24 + i, activeTxnMapBytes[i]);
             }
 
-            bos.reset();
-            out = new ObjectOutputStream(bos);
-            out.writeObject(dirtyPageMap);
-            byte[] dirtyPageMapBytes = bos.toByteArray();
-
-            logRecordBuffer.putInt(24 + i, dirtyPageMapBytes.length);
-            int j;
-            for (j = 0; j < dirtyPageMapBytes.length; j++) {
-                logRecordBuffer.put(28 + i + j, dirtyPageMapBytes[j]);
-            }
-
-            logSize = 28 + i + j;
+            logSize = 24 + i;
             logRecordBuffer.putInt(0, logSize);
 
         } catch (IOException e) {
