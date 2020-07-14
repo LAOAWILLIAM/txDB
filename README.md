@@ -1,5 +1,5 @@
 # txDB
-A on-disk relational database system built from scratch
+An on-disk relational database system built from scratch
 
 * Thread safe in concurrent environment;
 * Support insertion, delete, update and selection;
