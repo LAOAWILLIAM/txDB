@@ -16,4 +16,25 @@ public class LogRecovery {
         this.diskManager = diskManager;
         this.bufferManager = bufferManager;
     }
+
+    /**
+     * analysis phase
+     */
+    public void analysis() {
+
+    }
+
+    /**
+     * undo phase
+     */
+    public void undo() {
+
+    }
+
+    /**
+     * redo phase
+     */
+    public void redo() {
+
+    }
 }

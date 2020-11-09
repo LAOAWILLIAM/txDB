@@ -15,6 +15,8 @@ public class Page implements Serializable {
     private int pinCount;
     private byte[] pageData;
     private int lsn;
+    private int recLsn;
+    private boolean firstDirty;
     private ReadWriteLock readWriteLatch;
     private Lock readLatch;
     private Lock writeLatch;
@@ -25,6 +27,8 @@ public class Page implements Serializable {
         this.isDirty = false;
         this.pinCount = 0;
         this.lsn = Config.INVALID_LSN;
+        this.recLsn = Config.INVALID_LSN;
+        this.firstDirty = true;
         this.readWriteLatch = new ReentrantReadWriteLock();
         this.readLatch = readWriteLatch.readLock();
         this.writeLatch = readWriteLatch.writeLock();
@@ -75,6 +79,11 @@ public class Page implements Serializable {
     }
 
     public void setDirty(boolean isDirty) {
+        if (isDirty && this.firstDirty) {
+            System.out.println(pageId + " set recLsn: " + lsn);
+            this.recLsn = this.lsn;
+            this.firstDirty = false;
+        }
         this.isDirty = isDirty;
     }
 
@@ -104,5 +113,9 @@ public class Page implements Serializable {
 
     public void setLsn(int lsn) {
         this.lsn = lsn;
+    }
+
+    public int getRecLsn() {
+        return recLsn;
     }
 }
